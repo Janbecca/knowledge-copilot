@@ -1,0 +1,57 @@
+# Testing
+
+## Commands
+
+```powershell
+npm.cmd run db:init
+npm.cmd run typecheck
+npm.cmd run test:unit
+npm.cmd run test:integration
+npm.cmd test
+npm.cmd run build
+npm.cmd run verify:repository
+npm.cmd run verify:plugin
+npm.cmd run test:mcp
+npm.cmd run demo
+```
+
+Runtime checks:
+
+```powershell
+npm.cmd start
+Invoke-RestMethod http://127.0.0.1:3210/health
+```
+
+Open `http://127.0.0.1:3210` to verify the built panel against the same service state.
+
+## Coverage mapping
+
+| Requirement | Test/evidence |
+|---|---|
+| Short-video framework | `scenarios.test.ts` |
+| ESP32 operation model/noise | `protocol.test.ts` |
+| Wrong conclusion superseded | `lifecycle.test.ts`, export integration |
+| Pause/resume/only-new | `scenarios.test.ts` real cursors |
+| Novel Excel domain | `scenarios.test.ts` |
+| Duplicate turn idempotency | `scenarios.test.ts` |
+| SQLite restart persistence | `persistence.test.ts` |
+| No API key / mock | all tests plus demo |
+| UI lifecycle distinctions | `ui-contract.test.ts` plus preview |
+| Non-timeline export | export assertions and reconstructed heading order |
+
+Do not treat source inspection as runtime proof. Record actual command results here after every verification pass. External product-host testing remains separate from local server and browser-preview testing.
+
+## Verified on 2026-08-25
+
+- `typecheck`: passed.
+- Unit tests: 3/3 passed.
+- Integration tests: 7/7 passed.
+- Full test run: 10/10 passed.
+- Panel build: 133 modules transformed; single-file `index.html` 276.49 kB (67.23 kB gzip).
+- Database initialization: created/opened `./data/knowledge-copilot.sqlite` and applied migration 1.
+- Mock demo: session cursor 1, persisted ESP32 operation card, reconstructed Markdown output.
+- MCP SDK stdio smoke: 11 tools discovered; create/capture/get returned cursor 1 and an operation card; UI tool present.
+- Repository policy check: no committable secret, `.env`, or SQLite artifact found.
+- Plugin package check: final and Beta Skill copies are identical; all relative Markdown and manifest references resolve after standalone copying.
+- HTTP/preview smoke: health returned `ok=true`, capture returned cursor 1, state returned one card, panel returned 276,216 bytes containing the Chinese panel title.
+- Live ChatGPT/Codex, Claude, and WorkBuddy product installation: not performed; adapter status remains unverified.

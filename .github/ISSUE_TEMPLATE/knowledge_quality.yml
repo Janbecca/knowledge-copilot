@@ -1,0 +1,28 @@
+name: Knowledge extraction quality
+description: Report a false, duplicate, missing, or poorly structured knowledge card.
+title: "[Quality]: "
+labels: [quality]
+body:
+  - type: markdown
+    attributes:
+      value: "仅提供可公开的脱敏样例；不要提交真实私密对话或凭据。"
+  - type: textarea
+    id: input
+    attributes:
+      label: Redacted input
+      description: Minimal user/assistant/tool context needed to reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected knowledge result
+      description: Explain expected card type, evidence status, lifecycle, or export behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true

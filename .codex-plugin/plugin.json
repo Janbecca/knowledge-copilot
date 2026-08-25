@@ -1,0 +1,23 @@
+{
+  "name": "knowledge-copilot",
+  "version": "0.1.0-beta.1",
+  "description": "Local-first contextual learning sidecar exposed through MCP and MCP Apps",
+  "author": {
+    "name": "Local developer"
+  },
+  "interface": {
+    "displayName": "Knowledge Copilot",
+    "shortDescription": "Capture and review contextual learning cards.",
+    "longDescription": "A local-first MCP server and optional MCP App panel for capturing knowledge after each authorized conversation turn.",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "defaultPrompt": [
+      "Start a knowledge-copilot learning session.",
+      "Capture this completed turn into my learning sidecar.",
+      "Open the knowledge panel for my current session."
+    ]
+  },
+  "mcpServers": "./.mcp.json",
+  "apps": "./.app.json"
+}

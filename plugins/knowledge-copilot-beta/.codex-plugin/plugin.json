@@ -1,0 +1,22 @@
+{
+  "name": "knowledge-copilot-beta",
+  "version": "0.1.0-beta.1",
+  "description": "Capture and reconstruct contextual learning from authorized Codex conversations.",
+  "author": {
+    "name": "Knowledge Copilot Contributors"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Knowledge Copilot",
+    "shortDescription": "Turn authorized conversations into structured learning notes.",
+    "longDescription": "Beta skill workflow for extracting concepts, operations, corrections, and learning debt from the current Codex conversation. Persistent SQLite storage and MCP panel remain an optional local companion until the packaged server is released.",
+    "developerName": "Knowledge Copilot Contributors",
+    "category": "Productivity",
+    "capabilities": ["Read"],
+    "defaultPrompt": [
+      "开启知识沉淀，并在我要求时生成本轮知识笔记。",
+      "复盘当前对话，提取关键操作、原理和待学习问题。",
+      "画一张当前技术讨论的知识思维导图。"
+    ]
+  }
+}

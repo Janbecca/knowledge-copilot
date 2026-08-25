@@ -1,0 +1,1 @@
+{"mcpServers":{"knowledge-copilot":{"command":"node","args":["ABSOLUTE_PATH/knowledge-copilot/dist/mcp-server/index.js","--stdio"],"env":{"KNOWLEDGE_COPILOT_EXTRACTOR":"mock"}}}}

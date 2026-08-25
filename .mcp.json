@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "knowledge-copilot": {
+      "command": "node",
+      "args": ["./dist/mcp-server/index.js", "--stdio"],
+      "env": {
+        "KNOWLEDGE_COPILOT_EXTRACTOR": "mock"
+      }
+    }
+  }
+}

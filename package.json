@@ -1,0 +1,39 @@
+{
+  "name": "knowledge-copilot",
+  "version": "0.1.0-beta.1",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:panel && tsc -p tsconfig.build.json",
+    "build:panel": "vite build --configLoader runner --config apps/knowledge-panel/vite.config.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --configLoader runner",
+    "test:unit": "vitest run --configLoader runner tests/unit",
+    "test:integration": "vitest run --configLoader runner tests/integration",
+    "test:mcp": "tsx scripts/smoke-mcp.ts",
+    "verify:repository": "node scripts/check-repository.mjs",
+    "verify:plugin": "node scripts/validate-plugin-packages.mjs",
+    "verify": "npm run verify:repository && npm run typecheck && npm test && npm run build && npm run verify:plugin && npm run test:mcp",
+    "db:init": "tsx scripts/init-db.ts",
+    "demo": "tsx scripts/demo.ts",
+    "start": "node dist/mcp-server/index.js",
+    "start:stdio": "node dist/mcp-server/index.js --stdio",
+    "dev": "tsx watch mcp-server/index.ts",
+    "preview:panel": "vite --configLoader runner --config apps/knowledge-panel/vite.config.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.1.2",
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.62.4",
+    "@types/node": "^24.10.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-singlefile": "^2.3.0",
+    "vitest": "^4.0.15"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "knowledge-copilot-beta",
+  "interface": {
+    "displayName": "Knowledge Copilot Beta"
+  },
+  "plugins": [
+    {
+      "name": "knowledge-copilot-beta",
+      "source": {
+        "source": "local",
+        "path": "./plugins/knowledge-copilot-beta"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
