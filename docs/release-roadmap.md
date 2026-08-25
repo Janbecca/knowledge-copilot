@@ -66,7 +66,7 @@ Public HTTPS MCP endpoint: /mcp
 
 ### M0：仓库与发布基线
 
-当前状态（2026-08-25）：本地工程门禁已实现，首次本地 commit 随本阶段交付建立。GitHub 远程仓库与默认分支保护尚需 owner/repository 信息和平台权限。当前许可证保守标记为 `UNLICENSED`，待发布主体确认后再改为选定的公开许可证。
+当前状态（2026-08-25）：已完成本地工程门禁、首次 commit、GitHub 远程仓库与 `main` 分支保护。分支保护要求 PR、线性历史、会话解决，以及 Node.js 22/24 和 container 检查。当前许可证保守标记为 `UNLICENSED`，待发布主体确认后再改为选定的公开许可证。
 
 工作项：
 
@@ -85,7 +85,7 @@ Public HTTPS MCP endpoint: /mcp
 
 ### M1：生产配置与可部署服务
 
-当前状态（2026-08-25）：代码与容器部署形态已完成，包括生产监听、统一配置、非 root 镜像、健康/就绪检查、优雅退出、分离路由、请求体/超时/CORS/基础限流、Caddy HTTPS 终止示例和 challenge 响应。公网 HTTPS 测试环境及 MCP Inspector 线上验证仍需可配置 DNS 域名和部署目标。
+当前状态（2026-08-25）：代码与容器部署形态已完成，包括生产监听、统一配置、非 root 镜像、健康/就绪检查、优雅退出、分离路由、请求体/超时/CORS/基础限流、Caddy HTTPS 终止示例和 challenge 响应。GitHub Actions 已在 Linux 上完成镜像构建和容器 `/ready` 验证。公网 HTTPS 测试环境及 MCP Inspector 线上验证仍需可配置 DNS 域名和部署目标。
 
 工作项：
 

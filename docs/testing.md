@@ -55,4 +55,5 @@ Do not treat source inspection as runtime proof. Record actual command results h
 - Plugin package check: final and Beta Skill copies are identical; all relative Markdown and manifest references resolve after standalone copying.
 - HTTP/preview smoke: health returned `ok=true`, capture returned cursor 1, state returned one card, panel returned 276,216 bytes containing the Chinese panel title.
 - Deployable HTTP tests: production/local bind defaults, readiness, app redirect, challenge, CORS, request size and rate-limit behavior passed.
+- GitHub Actions: Node.js 22.x and 24.x verification passed; Linux Docker image built and its running `/ready` endpoint passed.
 - Live ChatGPT/Codex, Claude, and WorkBuddy product installation: not performed; adapter status remains unverified.
