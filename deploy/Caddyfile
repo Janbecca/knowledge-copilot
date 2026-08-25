@@ -1,0 +1,12 @@
+{$KNOWLEDGE_COPILOT_DOMAIN} {
+  encode zstd gzip
+  request_body {
+    max_size 1MB
+  }
+  reverse_proxy app:3210 {
+    transport http {
+      dial_timeout 5s
+      response_header_timeout 30s
+    }
+  }
+}

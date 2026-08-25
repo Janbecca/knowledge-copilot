@@ -1,0 +1,10 @@
+.git
+.github
+node_modules
+dist
+apps/knowledge-panel/dist
+data
+coverage
+.env*
+*.sqlite*
+*.db*

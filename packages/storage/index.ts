@@ -25,6 +25,7 @@ export class KnowledgeStore {
     }
   }
   close(): void { this.db.close(); }
+  isReady(): boolean { return (this.db.prepare("SELECT 1 AS ready").get() as { ready: number } | undefined)?.ready === 1; }
   createSession(session: Session): Session {
     this.db.prepare("INSERT INTO sessions VALUES(?,?,?,?,?,?,?,?)").run(session.session_id, session.title, session.status, JSON.stringify(session.capture_scope), session.created_at, session.updated_at, session.last_captured_turn, session.source_host);
     return session;

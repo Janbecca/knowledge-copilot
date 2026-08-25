@@ -22,7 +22,7 @@ npm.cmd start
 Invoke-RestMethod http://127.0.0.1:3210/health
 ```
 
-Open `http://127.0.0.1:3210` to verify the built panel against the same service state.
+Open `http://127.0.0.1:3210/app/` to verify the built panel against the same service state.
 
 ## Coverage mapping
 
@@ -46,7 +46,7 @@ Do not treat source inspection as runtime proof. Record actual command results h
 - `typecheck`: passed.
 - Unit tests: 3/3 passed.
 - Integration tests: 7/7 passed.
-- Full test run: 10/10 passed.
+- Full test run: 15/15 passed.
 - Panel build: 133 modules transformed; single-file `index.html` 276.49 kB (67.23 kB gzip).
 - Database initialization: created/opened `./data/knowledge-copilot.sqlite` and applied migration 1.
 - Mock demo: session cursor 1, persisted ESP32 operation card, reconstructed Markdown output.
@@ -54,4 +54,5 @@ Do not treat source inspection as runtime proof. Record actual command results h
 - Repository policy check: no committable secret, `.env`, or SQLite artifact found.
 - Plugin package check: final and Beta Skill copies are identical; all relative Markdown and manifest references resolve after standalone copying.
 - HTTP/preview smoke: health returned `ok=true`, capture returned cursor 1, state returned one card, panel returned 276,216 bytes containing the Chinese panel title.
+- Deployable HTTP tests: production/local bind defaults, readiness, app redirect, challenge, CORS, request size and rate-limit behavior passed.
 - Live ChatGPT/Codex, Claude, and WorkBuddy product installation: not performed; adapter status remains unverified.

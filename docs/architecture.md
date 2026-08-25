@@ -27,6 +27,8 @@ full persisted turns
 - `apps/knowledge-panel`: MCP Apps View plus standalone preview; uses tools/service HTTP, never SQLite.
 - `adapters/*`: host config and capability notes only; shared packages import none of them.
 
+The HTTP runtime loads a single validated configuration object. Development binds to loopback; production binds to all interfaces behind an HTTPS reverse proxy. `/health`, `/ready`, `/mcp`, and `/app/` have separate routing. MCP sessions remain process-local in M1 and are explicitly closed during graceful shutdown; durable knowledge writes remain transactional in SQLite.
+
 ## State and concurrency
 
 `sessions.last_captured_turn` is the real monotonically increasing cursor. Turns have a unique `(session_id,idempotency_key)` and cursor. Source host turn IDs are preferred idempotency keys; otherwise a content hash is used. Card revisions are immutable; `cards` is the current materialized view. LLM extraction is validated before an atomic event transaction.
