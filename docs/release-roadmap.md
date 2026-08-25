@@ -85,6 +85,8 @@ Public HTTPS MCP endpoint: /mcp
 
 ### M1：生产配置与可部署服务
 
+当前状态（2026-08-25）：代码与容器部署形态已完成，包括生产监听、统一配置、非 root 镜像、健康/就绪检查、优雅退出、分离路由、请求体/超时/CORS/基础限流、Caddy HTTPS 终止示例和 challenge 响应。公网 HTTPS 测试环境及 MCP Inspector 线上验证仍需可配置 DNS 域名和部署目标。
+
 工作项：
 
 - 将监听地址、端口、public base URL、数据库和日志级别全部配置化。

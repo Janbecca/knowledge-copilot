@@ -38,7 +38,7 @@ $env:KNOWLEDGE_COPILOT_EXTRACTOR='mock'
 npm.cmd start
 ```
 
-打开 `http://127.0.0.1:3210`。面板中可创建会话，并在“开发调试：提交一轮”中输入：
+打开 `http://127.0.0.1:3210/app/`。面板中可创建会话，并在“开发调试：提交一轮”中输入：
 
 - 用户消息：`运行 esptool read-flash 保存 backup.bin`
 - 助手消息：`读取完成；设备 Flash 未被改写，请验证文件大小和哈希。`
@@ -64,7 +64,20 @@ Streamable HTTP：
 npm.cmd start
 # MCP endpoint: http://127.0.0.1:3210/mcp
 # Health:       http://127.0.0.1:3210/health
+# Readiness:    http://127.0.0.1:3210/ready
+# Panel:        http://127.0.0.1:3210/app/
 ```
+
+## 容器部署
+
+服务镜像使用 Node.js 24、非 root 用户、`/ready` 健康检查和 SIGTERM 优雅退出。本地验证镜像：
+
+```powershell
+docker build -t knowledge-copilot:local .
+docker run --rm -p 3210:3210 -e KNOWLEDGE_COPILOT_EXTRACTOR=mock knowledge-copilot:local
+```
+
+公网测试环境使用 `compose.yaml` 与 Caddy 自动终止 HTTPS。域名、DNS 和部署步骤见 [部署指南](docs/deployment.md)。SQLite 卷仅适合单实例 Beta；进入 M2 后生产主库将迁移到托管关系型数据库。
 
 工具：`start_learning_session`、`capture_conversation_turn`、`get_learning_session`、`list_knowledge_cards`、`get_knowledge_card`、`revise_knowledge_card`、`change_capture_status`、`change_card_learning_status`、`list_learning_debts`、`export_learning_package`，以及 UI 工具 `open_knowledge_panel`。
 

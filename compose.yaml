@@ -1,0 +1,32 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      KNOWLEDGE_COPILOT_PUBLIC_BASE_URL: https://${KNOWLEDGE_COPILOT_DOMAIN}
+      KNOWLEDGE_COPILOT_CORS_ORIGINS: ${KNOWLEDGE_COPILOT_CORS_ORIGINS:-}
+      KNOWLEDGE_COPILOT_APPS_CHALLENGE: ${KNOWLEDGE_COPILOT_APPS_CHALLENGE:-}
+    volumes:
+      - knowledge_data:/app/data
+    expose:
+      - "3210"
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      KNOWLEDGE_COPILOT_DOMAIN: ${KNOWLEDGE_COPILOT_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  knowledge_data:
+  caddy_data:
+  caddy_config:
