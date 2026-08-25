@@ -6,6 +6,7 @@
 
 - 增加生产/本地监听策略、统一运行配置、健康/就绪路由、请求上限、超时、CORS、基础限流和域名 challenge。
 - 增加非 root 多阶段容器、Caddy HTTPS 终止示例和 MCP transport 优雅停机。
+- 移除 Windows-only Rollup 直接依赖，修复 Linux `npm ci`。
 - 补齐最终插件包与 Beta Skill 的内置 references，并增加独立复制校验。
 - 增加密钥/SQLite 提交检查、Node.js 22/24 CI 和高危依赖漏洞门禁。
 - 明确 Beta 版本号和发布规则。
