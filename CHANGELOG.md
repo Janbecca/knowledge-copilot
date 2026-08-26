@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+- 为全部 MCP 工具增加准确的风险注解、封闭世界声明和结构化输出 Schema。
+- 统一工具领域错误为稳定的 `not_found`、`conflict`、`internal_error` 结果，并避免泄漏未知内部异常。
+- 增加覆盖全部 11 个工具、空结果、幂等重放和非法参数的 MCP 合约测试。
 - 增加生产/本地监听策略、统一运行配置、健康/就绪路由、请求上限、超时、CORS、基础限流和域名 challenge。
 - 增加非 root 多阶段容器、Caddy HTTPS 终止示例和 MCP transport 优雅停机。
 - 移除 Windows-only Rollup 直接依赖，修复 Linux `npm ci`。

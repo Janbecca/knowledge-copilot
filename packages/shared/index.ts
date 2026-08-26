@@ -1,9 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 
+export const captureScopeSchema = z.object({ mode: z.enum(["all", "topic"]), topic: z.string().nullable() });
+
 export const sessionSchema = z.object({
   session_id: z.string(), title: z.string(), status: z.enum(["active", "paused", "ended"]),
-  capture_scope: z.object({ mode: z.enum(["all", "topic"]), topic: z.string().nullable() }),
+  capture_scope: captureScopeSchema,
   created_at: z.string(), updated_at: z.string(), last_captured_turn: z.number().int().nonnegative(),
   source_host: z.string()
 });

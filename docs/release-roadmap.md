@@ -140,6 +140,8 @@ Public HTTPS MCP endpoint: /mcp
 
 ### M4：MCP 合约与审核元数据
 
+当前状态（2026-08-26）：全部 11 个工具已声明结构化输出 Schema、保守的读写/破坏性/幂等/开放世界注解，并通过内存 MCP 客户端覆盖正向、空结果、幂等重放、非法参数和领域错误。仍需在 MCP Inspector 与 OpenAI Scan Tools 中完成外部扫描，并补充系统化的工具选择正负向评测。
+
 工作项：
 
 - 为每个工具补充准确的 `readOnlyHint`、`openWorldHint`、`destructiveHint`。
