@@ -7,8 +7,10 @@ import type { KnowledgeExtractor } from "./types.js";
 export class KnowledgeService {
   constructor(readonly store:KnowledgeStore,readonly extractor:KnowledgeExtractor){}
   start(input:{title?:string;source_host?:string;capture_scope?:{mode:"all"|"topic";topic:string|null}}={}):Session{
-    const at=now();return this.store.createSession({session_id:id("session"),title:input.title??"情境化学习会话",status:"active",capture_scope:input.capture_scope??{mode:"all",topic:null},created_at:at,updated_at:at,last_captured_turn:0,source_host:input.source_host??"unknown"});
+    const at=now();return this.store.createSession({session_id:id("session"),title:this.normalizedTitle(input.title,"待命名学习会话"),status:"active",capture_scope:input.capture_scope??{mode:"all",topic:null},created_at:at,updated_at:at,last_captured_turn:0,source_host:input.source_host??"unknown"});
   }
+  renameSession(input:{session_id:string;title:string}):Session{const session=this.requireSession(input.session_id);session.title=this.normalizedTitle(input.title);session.updated_at=now();this.store.updateSession(session);return session;}
+  launch(input:{session_id?:string;title?:string;source_host?:string}={}){const session=input.session_id?this.requireSession(input.session_id):this.start({title:input.title,source_host:input.source_host??"chatgpt"});return this.get(session.session_id);}
   get(sessionId:string){const session=this.requireSession(sessionId);return {session,cursor:session.last_captured_turn,cards:this.store.listCards(sessionId,{includeInactive:true}),learning_debts:this.store.listCards(sessionId,{type:"learning_debt"})};}
   async capture(input:{session_id:string;user_message:string;assistant_message:string;tool_observations?:string[];source_reference?:string;idempotency_key?:string;source_host?:string}){
     const session=this.requireSession(input.session_id);
@@ -46,5 +48,6 @@ export class KnowledgeService {
   export(sessionId:string,format:ExportFormat){const session=this.requireSession(sessionId);const content=reconstructExport({session,turns:this.store.listTurns(sessionId),cards:this.store.listCards(sessionId,{includeInactive:true}),format});const exportId=id("export");this.store.saveExport(exportId,sessionId,format,session.last_captured_turn,content);return {export_id:exportId,format,source_cursor:session.last_captured_turn,content};}
   getCard(cardId:string){const card=this.store.getCard(cardId);if(!card)throw new Error("card not found");return {card,revisions:this.store.listRevisions(cardId)};}
   private requireSession(id:string){const s=this.store.getSession(id);if(!s)throw new Error("session not found");return s;}
+  private normalizedTitle(title:string|undefined,fallback?:string):string{const normalized=title?.trim()||fallback;if(!normalized)throw new Error("session title is required");if(normalized.length>80)throw new Error("session title must be 80 characters or fewer");return normalized;}
   private findCardSession(cardId:string):string{const r=this.store.db.prepare("SELECT session_id FROM cards WHERE card_id=?").get(cardId) as {session_id:string}|undefined;if(!r)throw new Error("card not found");return r.session_id;}
 }

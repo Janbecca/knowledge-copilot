@@ -30,14 +30,14 @@ const destructiveTools = new Set([
   "change_capture_status", "change_card_learning_status",
 ]);
 const idempotentTools = new Set([
-  ...readTools, "capture_conversation_turn", "revise_knowledge_card",
+  ...readTools, "capture_conversation_turn", "revise_knowledge_card", "rename_learning_session",
 ]);
 
 describe("MCP public tool contract", () => {
   it("declares output schemas and conservative risk annotations for every tool", async () => {
     const client = await harness();
     const listed = await client.listTools();
-    expect(listed.tools).toHaveLength(11);
+    expect(listed.tools).toHaveLength(13);
     for (const tool of listed.tools) {
       expect(tool.outputSchema).toMatchObject({ type: "object" });
       expect(tool.annotations?.openWorldHint).toBe(false);
@@ -47,6 +47,8 @@ describe("MCP public tool contract", () => {
       expect(tool.title).toBeTruthy();
       expect(tool.description).toBeTruthy();
     }
+    const launch = listed.tools.find(tool => tool.name === "launch_knowledge_copilot")!;
+    expect(launch._meta).toMatchObject({ ui: { resourceUri: "ui://knowledge-copilot/panel-v2.html" }, "openai/outputTemplate": "ui://knowledge-copilot/panel-v2.html" });
   });
 
   it("returns schema-valid structured results for positive and empty workflows", async () => {
@@ -54,6 +56,10 @@ describe("MCP public tool contract", () => {
     const started = await client.callTool({ name: "start_learning_session", arguments: { title: "Contract" } });
     const session = started.structuredContent as { session_id: string };
     expect(session.session_id).toMatch(/^session_/);
+    expect((await client.callTool({ name: "rename_learning_session", arguments: { session_id: session.session_id, title: "GPT 自主标题" } })).structuredContent).toMatchObject({ title: "GPT 自主标题" });
+
+    const launched = await client.callTool({ name: "launch_knowledge_copilot", arguments: { title: "自动打开的笔记" } });
+    expect(launched.structuredContent).toMatchObject({ session: { title: "自动打开的笔记" }, cursor: 0, cards: [] });
 
     const empty = await client.callTool({ name: "list_knowledge_cards", arguments: { session_id: session.session_id } });
     expect(empty.structuredContent).toMatchObject({ cursor: 0, cards: [] });

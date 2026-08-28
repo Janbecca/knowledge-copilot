@@ -25,8 +25,13 @@ async function body(req: IncomingMessage, limit: number): Promise<unknown> {
 function responseHeaders(req: IncomingMessage, config: RuntimeConfig): Record<string, string> {
   const headers: Record<string, string> = { "x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "cache-control": "no-store" };
   const origin = req.headers.origin;
-  if (origin && config.corsOrigins.includes(origin)) { headers["access-control-allow-origin"] = origin; headers.vary = "Origin"; }
+  if (origin && allowedOrigin(origin, config)) { headers["access-control-allow-origin"] = origin; headers.vary = "Origin"; }
   return headers;
+}
+function allowedOrigin(origin: string, config: RuntimeConfig): boolean {
+  if (config.corsOrigins.includes(origin)) return true;
+  if (!config.publicBaseUrl) return false;
+  try { return new URL(config.publicBaseUrl).origin === origin; } catch { return false; }
 }
 function json(req: IncomingMessage, res: ServerResponse, config: RuntimeConfig, status: number, data: unknown): void {
   res.writeHead(status, { ...responseHeaders(req, config), "content-type": "application/json; charset=utf-8" }); res.end(JSON.stringify(data));
@@ -40,7 +45,7 @@ export async function startHttp(service: KnowledgeService, config: RuntimeConfig
     try {
       const url = new URL(req.url ?? "/", config.publicBaseUrl ?? `http://${config.host}:${config.port}`);
       const origin = req.headers.origin;
-      if (origin && !config.corsOrigins.includes(origin)) throw new HttpError(403, "origin not allowed");
+      if (origin && !allowedOrigin(origin, config)) throw new HttpError(403, "origin not allowed");
       if (req.method === "OPTIONS") {
         res.writeHead(204, { ...responseHeaders(req, config), "access-control-allow-methods": "GET,POST,DELETE,OPTIONS", "access-control-allow-headers": "content-type,mcp-session-id,mcp-protocol-version" }); res.end(); return;
       }
@@ -69,6 +74,7 @@ export async function startHttp(service: KnowledgeService, config: RuntimeConfig
       }
       if (url.pathname === "/api/sessions" && req.method === "POST") { json(req, res, config, 201, service.start(await body(req, config.bodyLimitBytes) as never)); return; }
       const sm = url.pathname.match(/^\/api\/sessions\/([^/]+)$/); if (sm && req.method === "GET") { json(req, res, config, 200, service.get(sm[1]!)); return; }
+      const title = url.pathname.match(/^\/api\/sessions\/([^/]+)\/title$/); if (title && req.method === "POST") { json(req, res, config, 200, service.renameSession({ ...(await body(req, config.bodyLimitBytes) as object), session_id: title[1]! } as never)); return; }
       const cards = url.pathname.match(/^\/api\/sessions\/([^/]+)\/cards$/); if (cards && req.method === "GET") { const since = url.searchParams.get("since_cursor"); json(req, res, config, 200, { cursor: service.get(cards[1]!).cursor, cards: service.store.listCards(cards[1]!, { sinceCursor: since === null ? undefined : Number(since), includeInactive: url.searchParams.get("include_inactive") === "true", type: url.searchParams.get("type") ?? undefined }) }); return; }
       const cap = url.pathname.match(/^\/api\/sessions\/([^/]+)\/capture$/); if (cap && req.method === "POST") { json(req, res, config, 200, await service.capture({ ...(await body(req, config.bodyLimitBytes) as object), session_id: cap[1]! } as never)); return; }
       const stat = url.pathname.match(/^\/api\/sessions\/([^/]+)\/status$/); if (stat && req.method === "POST") { json(req, res, config, 200, service.changeStatus({ ...(await body(req, config.bodyLimitBytes) as object), session_id: stat[1]! } as never)); return; }

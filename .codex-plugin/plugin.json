@@ -7,15 +7,15 @@
   },
   "interface": {
     "displayName": "Knowledge Copilot",
-    "shortDescription": "Capture and review contextual learning cards.",
-    "longDescription": "A local-first MCP server and optional MCP App panel for capturing knowledge after each authorized conversation turn.",
+    "shortDescription": "Open an inline notebook and capture contextual learning cards.",
+    "longDescription": "A contextual learning sidecar that generates concise session titles, opens an inline MCP App notebook when explicitly invoked, and captures only authorized conversation turns.",
     "developerName": "Local developer",
     "category": "Productivity",
     "capabilities": ["Interactive", "Read", "Write"],
     "defaultPrompt": [
-      "Start a knowledge-copilot learning session.",
-      "Capture this completed turn into my learning sidecar.",
-      "Open the knowledge panel for my current session."
+      "@Knowledge Copilot 开启知识沉淀并打开笔记，标题由你根据当前话题生成。",
+      "把当前学习会话改成一个更准确的标题。",
+      "记录本轮并打开知识面板。"
     ]
   },
   "mcpServers": "./.mcp.json",
