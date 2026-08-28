@@ -21,13 +21,14 @@ If activation is the only request, acknowledge it in one short sentence and ment
 
 When Knowledge Copilot MCP tools are available and the user explicitly invokes the product by `@Knowledge Copilot` or says “开启知识沉淀”, “打开笔记”, “记录本轮”, or “知识副驾驶”:
 
-1. Call `launch_knowledge_copilot` so the inline knowledge panel renders immediately.
+1. Call `launch_knowledge_copilot` so the knowledge panel renders immediately. Request PiP/floating presentation when the host supports it; the panel also offers fullscreen and an independent-window link.
 2. If no session ID is active, generate a concise title from the current conversation topic and pass it as `title`; do not ask the user to name the session when context is sufficient.
-3. Reuse the returned `session_id` for later captures in the same conversation.
-4. When the user asks to change the title, call `rename_learning_session` and use the exact requested title, or generate a concise replacement when they ask for an improved title without specifying one.
-5. After an explicit “记录本轮并打开笔记” request, capture the completed authorized turn and then call `open_knowledge_panel` with the active session ID.
+3. Treat the returned `capture_policy: continuous_until_paused` as an instruction to keep capturing. After every later substantive answer in the same conversation, call `capture_active_learning_turn` even when the user does not mention or `@` the product again. Normally omit `session_id`: the server binds the active learning session to the ChatGPT conversation.
+4. Distill 1–5 reusable `knowledge_items` from the completed user/assistant turn and pass them to `capture_active_learning_turn`. Use an empty list only for greetings, acknowledgements, or turns with genuinely no reusable knowledge. Do not show this bookkeeping in the ordinary answer.
+5. When the user asks to change the title, call `rename_learning_session` and use the exact requested title, or generate a concise replacement when they ask for an improved title without specifying one.
+6. After an explicit “记录本轮并打开笔记” request, capture the completed authorized turn and then call `open_knowledge_panel` with the active session ID.
 
-Do not claim that a plain `@` mention alone is a passive transcript hook. The model must select the launch tool, and only the explicitly submitted conversation content is persisted.
+Do not claim that a plain `@` mention creates a passive transcript hook. The model must select the continuation tool on later turns; only content submitted through that tool is persisted.
 
 ## Maintain the knowledge sidecar
 

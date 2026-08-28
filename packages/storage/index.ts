@@ -34,6 +34,10 @@ export class KnowledgeStore {
     const r = this.db.prepare("SELECT * FROM sessions WHERE session_id=?").get(id) as Record<string, unknown> | undefined;
     return r ? { ...r, capture_scope: JSON.parse(String(r.capture_scope)) } as Session : null;
   }
+  findActiveSessionBySourceHost(sourceHost: string): Session | null {
+    const r = this.db.prepare("SELECT * FROM sessions WHERE source_host=? AND status!='ended' ORDER BY updated_at DESC LIMIT 1").get(sourceHost) as Record<string, unknown> | undefined;
+    return r ? { ...r, capture_scope: JSON.parse(String(r.capture_scope)) } as Session : null;
+  }
   updateSession(session: Session): void {
     this.db.prepare("UPDATE sessions SET title=?,status=?,capture_scope=?,updated_at=?,last_captured_turn=?,source_host=? WHERE session_id=?")
       .run(session.title, session.status, JSON.stringify(session.capture_scope), session.updated_at, session.last_captured_turn, session.source_host, session.session_id);

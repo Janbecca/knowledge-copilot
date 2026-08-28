@@ -26,18 +26,18 @@ const readTools = new Set([
   "list_learning_debts", "open_knowledge_panel",
 ]);
 const destructiveTools = new Set([
-  "capture_conversation_turn", "revise_knowledge_card",
+  "revise_knowledge_card",
   "change_capture_status", "change_card_learning_status",
 ]);
 const idempotentTools = new Set([
-  ...readTools, "capture_conversation_turn", "revise_knowledge_card", "rename_learning_session",
+  ...readTools, "capture_conversation_turn", "capture_active_learning_turn", "revise_knowledge_card", "rename_learning_session", "launch_knowledge_copilot",
 ]);
 
 describe("MCP public tool contract", () => {
   it("declares output schemas and conservative risk annotations for every tool", async () => {
     const client = await harness();
     const listed = await client.listTools();
-    expect(listed.tools).toHaveLength(13);
+    expect(listed.tools).toHaveLength(14);
     for (const tool of listed.tools) {
       expect(tool.outputSchema).toMatchObject({ type: "object" });
       expect(tool.annotations?.openWorldHint).toBe(false);
@@ -48,7 +48,50 @@ describe("MCP public tool contract", () => {
       expect(tool.description).toBeTruthy();
     }
     const launch = listed.tools.find(tool => tool.name === "launch_knowledge_copilot")!;
-    expect(launch._meta).toMatchObject({ ui: { resourceUri: "ui://knowledge-copilot/panel-v2.html" }, "openai/outputTemplate": "ui://knowledge-copilot/panel-v2.html" });
+    expect(launch._meta).toMatchObject({ ui: { resourceUri: "ui://knowledge-copilot/panel-v3.html" }, "openai/outputTemplate": "ui://knowledge-copilot/panel-v3.html" });
+  });
+
+  it("binds later captures to the ChatGPT conversation without another mention", async () => {
+    const client = await harness();
+    const meta = { "openai/session": "chat-contract-1", "openai/subject": "user-contract-1" };
+    const launched = await client.callTool({
+      name: "launch_knowledge_copilot",
+      arguments: { title: "缓存机制" },
+      _meta: meta,
+    });
+    const session = launched.structuredContent as { session: { session_id: string } };
+
+    const captured = await client.callTool({
+      name: "capture_active_learning_turn",
+      arguments: {
+        user_message: "为什么缓存穿透会压垮数据库？",
+        assistant_message: "不存在的键无法命中缓存，请求会反复落到数据库；可用空值缓存或布隆过滤器缓解。",
+        knowledge_items: [{
+          type: "concept",
+          title: "缓存穿透的形成机制",
+          summary: "不存在的键无法命中缓存，重复请求会持续访问数据库。",
+          mechanism: "缓存层没有对应键，每次请求都会继续查询后端存储。",
+          transfer: ["可通过空值缓存、布隆过滤器或入口校验减少无效查询。"],
+          tags: ["缓存", "数据库"],
+          confidence: "high",
+        }],
+        source_reference: "chat-contract-turn-2",
+      },
+      _meta: meta,
+    });
+    expect(captured.structuredContent).toMatchObject({ cursor: 1, session_status: "active" });
+
+    const relaunched = await client.callTool({
+      name: "launch_knowledge_copilot",
+      arguments: { title: "不应创建新会话" },
+      _meta: meta,
+    });
+    expect(relaunched.structuredContent).toMatchObject({
+      session: { session_id: session.session.session_id, title: "缓存机制" },
+      cursor: 1,
+      capture_policy: "continuous_until_paused",
+      next_tool: "capture_active_learning_turn",
+    });
   });
 
   it("returns schema-valid structured results for positive and empty workflows", async () => {
