@@ -8,7 +8,7 @@ const client=new Client({name:"knowledge-copilot-smoke",version:"0.1.0"});
 try{
  await client.connect(transport);
  const tools=await client.listTools();
- const required=["start_learning_session","capture_conversation_turn","get_learning_session","export_learning_package","open_knowledge_panel"];
+ const required=["start_learning_session","rename_learning_session","capture_conversation_turn","get_learning_session","export_learning_package","launch_knowledge_copilot","open_knowledge_panel"];
  for(const name of required)if(!tools.tools.some(t=>t.name===name))throw new Error(`missing tool ${name}`);
  for(const tool of tools.tools){
   if(!tool.outputSchema)throw new Error(`missing output schema for ${tool.name}`);

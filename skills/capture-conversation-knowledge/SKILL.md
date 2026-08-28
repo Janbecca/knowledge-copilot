@@ -1,6 +1,6 @@
 ---
 name: capture-conversation-knowledge
-description: Capture and reconstruct contextual learning from an ongoing conversation while keeping the user's task primary. Use when the user asks to 开启/继续/暂停知识沉淀、边做边学、旁路记录知识卡片、只看新增、复盘或导出当前对话，or wants concepts, mechanisms, methods, frameworks, valuable operations, corrections, learning debt, provenance, knowledge maps, operation manuals, or study notes extracted without turning the main task into a lesson.
+description: Capture and reconstruct contextual learning from an ongoing conversation while keeping the user's task primary. Use when the user @mentions Knowledge Copilot or asks to 开启/继续/暂停知识沉淀、打开笔记、记录本轮、边做边学、旁路记录知识卡片、只看新增、复盘或导出当前对话，or wants concepts, mechanisms, methods, frameworks, valuable operations, corrections, learning debt, provenance, knowledge maps, operation manuals, or study notes extracted without turning the main task into a lesson.
 ---
 
 # Capture Conversation Knowledge
@@ -16,6 +16,18 @@ Treat the available conversation as source material for a learning sidecar. Keep
 5. Exclude private details, emotional disclosures, casual logistics, and secrets unless explicitly needed for the requested learning material. Redact credentials and sensitive values from operations.
 
 If activation is the only request, acknowledge it in one short sentence and mention “生成本轮知识笔记”. If activation accompanies a task, perform the task without a separate tracking acknowledgment.
+
+## Launch the real product layer when available
+
+When Knowledge Copilot MCP tools are available and the user explicitly invokes the product by `@Knowledge Copilot` or says “开启知识沉淀”, “打开笔记”, “记录本轮”, or “知识副驾驶”:
+
+1. Call `launch_knowledge_copilot` so the inline knowledge panel renders immediately.
+2. If no session ID is active, generate a concise title from the current conversation topic and pass it as `title`; do not ask the user to name the session when context is sufficient.
+3. Reuse the returned `session_id` for later captures in the same conversation.
+4. When the user asks to change the title, call `rename_learning_session` and use the exact requested title, or generate a concise replacement when they ask for an improved title without specifying one.
+5. After an explicit “记录本轮并打开笔记” request, capture the completed authorized turn and then call `open_knowledge_panel` with the active session ID.
+
+Do not claim that a plain `@` mention alone is a passive transcript hook. The model must select the launch tool, and only the explicitly submitted conversation content is persisted.
 
 ## Maintain the knowledge sidecar
 

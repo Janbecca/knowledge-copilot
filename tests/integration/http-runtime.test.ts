@@ -39,4 +39,13 @@ describe("deployable HTTP runtime", () => {
     expect(limited.status).toBe(429);
     expect(limited.headers.get("x-request-id")).toBeTruthy();
   });
+  it("allows the standalone panel origin and supports renaming sessions", async () => {
+    const base = await runtime({ publicBaseUrl: "https://panel.example.test" });
+    const preflight = await fetch(`${base}/api/sessions`, { method: "OPTIONS", headers: { origin: "https://panel.example.test", "access-control-request-method": "POST" } });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get("access-control-allow-origin")).toBe("https://panel.example.test");
+    const created = await (await fetch(`${base}/api/sessions`, { method: "POST", headers: { origin: "https://panel.example.test", "content-type": "application/json" }, body: JSON.stringify({ title: "Original" }) })).json() as { session_id: string };
+    const renamed = await (await fetch(`${base}/api/sessions/${created.session_id}/title`, { method: "POST", headers: { origin: "https://panel.example.test", "content-type": "application/json" }, body: JSON.stringify({ title: "Renamed" }) })).json() as { title: string };
+    expect(renamed.title).toBe("Renamed");
+  });
 });

@@ -10,7 +10,7 @@
 
 ## 当前实现状态
 
-- **已实现并可本地验证**：v2 卡片协议、六种生命周期事件、真实 cursor、幂等轮次、SQLite迁移、mock extractor、可配置 LLM extractor、10 个 MCP 工具、Streamable HTTP/stdio、Markdown/Mermaid/JSON导出、独立面板、MCP App资源、自动测试。
+- **已实现并可本地验证**：v2 卡片协议、六种生命周期事件、真实 cursor、幂等轮次、SQLite迁移、mock extractor、可配置 LLM extractor、13 个 MCP 工具、Streamable HTTP/stdio、Markdown/Mermaid/JSON导出、独立面板、MCP App资源、自动测试。
 - **已实现但待真实产品验证**：Codex/Claude/WorkBuddy 的薄配置样例；MCP App在具体商业宿主中的渲染。
 - **已实际验证的标准环境**：本地 HTTP/stdio MCP Server、独立 UI 预览；MCP Apps官方协议形态。详见 `docs/testing.md`。
 - **受宿主限制**：逐轮自动调用依赖宿主 lifecycle hook 或 agent行为；固定侧栏不是 MCP Apps 的通用保证。
@@ -79,7 +79,7 @@ docker run --rm -p 3210:3210 -e KNOWLEDGE_COPILOT_EXTRACTOR=mock knowledge-copil
 
 公网测试环境使用 `compose.yaml` 与 Caddy 自动终止 HTTPS。域名、DNS 和部署步骤见 [部署指南](docs/deployment.md)。SQLite 卷仅适合单实例 Beta；进入 M2 后生产主库将迁移到托管关系型数据库。
 
-工具：`start_learning_session`、`capture_conversation_turn`、`get_learning_session`、`list_knowledge_cards`、`get_knowledge_card`、`revise_knowledge_card`、`change_capture_status`、`change_card_learning_status`、`list_learning_debts`、`export_learning_package`，以及 UI 工具 `open_knowledge_panel`。
+工具：`start_learning_session`、`rename_learning_session`、`capture_conversation_turn`、`get_learning_session`、`list_knowledge_cards`、`get_knowledge_card`、`revise_knowledge_card`、`change_capture_status`、`change_card_learning_status`、`list_learning_debts`、`export_learning_package`，以及 UI 工具 `launch_knowledge_copilot`、`open_knowledge_panel`。
 
 ## 真实模型配置
 
