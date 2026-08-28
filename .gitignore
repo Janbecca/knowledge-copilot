@@ -1,6 +1,10 @@
 node_modules/
 dist/
 apps/knowledge-panel/dist/
+apps/desktop-companion/dist/
+apps/desktop-companion/src-tauri/target/
+apps/desktop-companion/src-tauri/gen/
+.playwright-cli/
 data/*.sqlite*
 .env
 .env.*

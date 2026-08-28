@@ -5,8 +5,13 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "build": "npm run build:panel && tsc -p tsconfig.build.json",
+    "build": "npm run build:panel && npm run build:desktop-ui && tsc -p tsconfig.build.json",
     "build:panel": "vite build --configLoader runner --config apps/knowledge-panel/vite.config.ts",
+    "build:desktop-ui": "vite build --configLoader runner --config apps/desktop-companion/vite.config.ts",
+    "desktop:dev": "tauri dev --config apps/desktop-companion/src-tauri/tauri.conf.json",
+    "desktop:build": "tauri build --config apps/desktop-companion/src-tauri/tauri.conf.json",
+    "dev:desktop-ui": "vite --configLoader runner --config apps/desktop-companion/vite.config.ts",
+    "preview:desktop": "vite preview --configLoader runner --config apps/desktop-companion/vite.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --configLoader runner",
     "test:unit": "vitest run --configLoader runner tests/unit",
@@ -23,11 +28,13 @@
     "preview:panel": "vite --configLoader runner --config apps/knowledge-panel/vite.config.ts"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
     "@modelcontextprotocol/ext-apps": "^1.1.2",
     "@modelcontextprotocol/sdk": "^1.25.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
     "@types/node": "^24.10.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",

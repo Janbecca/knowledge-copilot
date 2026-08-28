@@ -10,6 +10,7 @@ authorized completed turn
   -> SQLite event + revision + materialized state
   -> MCP structured result / HTTP service API
   -> MCP App view or standalone preview
+  -> restricted HTTPS iframe in optional desktop companion
 
 full persisted turns
   -> ExportEngine reconstruction
@@ -25,9 +26,12 @@ full persisted turns
 - `packages/shared`: shared Session/Turn schema, IDs, hashing, redaction.
 - `mcp-server`: transport and tool/resource registration only.
 - `apps/knowledge-panel`: MCP Apps View plus standalone preview; uses tools/service HTTP, never SQLite.
+- `apps/desktop-companion`: Tauri 2 window shell; owns only window controls and embeds the production panel from the fixed HTTPS origin. It has no shell, filesystem, HTTP-client, clipboard, accessibility, or screen-capture capability.
 - `adapters/*`: host config and capability notes only; shared packages import none of them.
 
 The HTTP runtime loads a single validated configuration object. Development binds to loopback; production binds to all interfaces behind an HTTPS reverse proxy. `/health`, `/ready`, `/mcp`, and `/app/` have separate routing. MCP sessions remain process-local in M1 and are explicitly closed during graceful shutdown; durable knowledge writes remain transactional in SQLite.
+
+The desktop companion is a presentation boundary, not a capture adapter. Its local origin can frame only `https://knowledge-copilot.xyz`; the remote panel runs in a sandboxed iframe and uses the existing service API. Conversation capture still requires an explicit MCP tool call or a supported host lifecycle hook.
 
 ## State and concurrency
 

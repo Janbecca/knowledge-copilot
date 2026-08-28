@@ -10,10 +10,10 @@
 
 ## 当前实现状态
 
-- **已实现并可本地验证**：v2 卡片协议、六种生命周期事件、真实 cursor、幂等轮次、SQLite迁移、mock extractor、可配置 LLM extractor、14 个 MCP 工具、ChatGPT 会话绑定、PiP/全屏/独立窗口面板、Streamable HTTP/stdio、Markdown/Mermaid/JSON导出、自动测试。
+- **已实现并可本地验证**：v2 卡片协议、六种生命周期事件、真实 cursor、幂等轮次、SQLite迁移、mock extractor、可配置 LLM extractor、14 个 MCP 工具、ChatGPT 会话绑定、PiP/全屏/独立窗口面板、Windows 置顶桌面伴侣外壳、Streamable HTTP/stdio、Markdown/Mermaid/JSON导出、自动测试。
 - **已实现但待真实产品验证**：Codex/Claude/WorkBuddy 的薄配置样例；MCP App在具体商业宿主中的渲染。
 - **已实际验证的标准环境**：本地 HTTP/stdio MCP Server、独立 UI 预览；MCP Apps官方协议形态。详见 `docs/testing.md`。
-- **受宿主限制**：逐轮自动调用依赖宿主 lifecycle hook 或 agent行为；固定侧栏不是 MCP Apps 的通用保证。
+- **受宿主限制**：逐轮自动调用依赖宿主 lifecycle hook 或 agent行为；ChatGPT 中选择应用只作用于当前消息，固定侧栏和跨消息被动监听都不是 MCP Apps 的通用能力。桌面伴侣负责持续显示，不会绕过宿主权限读取对话。
 
 ## GitHub Marketplace Beta
 
@@ -49,6 +49,20 @@ npm.cmd start
 npm.cmd run demo
 ```
 
+## Windows 桌面伴侣
+
+桌面伴侣是一个可拖动、可缩放、始终置顶的轻量窗口，加载 `https://knowledge-copilot.xyz/app/`。它复用现有域名、服务器和知识数据，不是另一套后端，也不会读取 ChatGPT、WorkBuddy 或 Claude Code 的窗口内容。
+
+开发与打包命令：
+
+```powershell
+npm.cmd run preview:desktop
+npm.cmd run desktop:dev
+npm.cmd run desktop:build
+```
+
+首次打包需要 Rust、Microsoft C++ Build Tools 和 WebView2。详细说明、安装产物位置和当前限制见 [桌面伴侣说明](apps/desktop-companion/README.md)。
+
 ## MCP Server
 
 stdio：
@@ -81,7 +95,7 @@ docker run --rm -p 3210:3210 -e KNOWLEDGE_COPILOT_EXTRACTOR=mock knowledge-copil
 
 工具：`start_learning_session`、`rename_learning_session`、`capture_conversation_turn`、`capture_active_learning_turn`、`get_learning_session`、`list_knowledge_cards`、`get_knowledge_card`、`revise_knowledge_card`、`change_capture_status`、`change_card_learning_status`、`list_learning_debts`、`export_learning_package`，以及 UI 工具 `launch_knowledge_copilot`、`open_knowledge_panel`。
 
-在 ChatGPT 中，首次调用 `launch_knowledge_copilot` 会将学习会话绑定到当前匿名对话标识，并请求以 PiP 悬浮方式展示。之后模型应在每个有实质内容的回答后调用 `capture_active_learning_turn`，无需用户再次 `@` 或传递 `session_id`。这是一套工具调用约定，并非能够被 MCP 应用绕过宿主权限实现的被动消息监听。
+在 ChatGPT 中，首次调用 `launch_knowledge_copilot` 会将学习会话绑定到当前匿名对话标识，并请求展示面板。ChatGPT 的应用选择只作用于当前消息；后续消息若没有再次选择应用，不能保证继续调用 `capture_active_learning_turn`。这是一套工具调用约定，并非能够被 MCP 应用绕过宿主权限实现的被动消息监听。桌面伴侣可以让笔记窗口持续可见，但不能改变这个调用边界。
 
 ## 真实模型配置
 
