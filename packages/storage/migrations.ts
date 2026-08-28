@@ -35,5 +35,9 @@ export const migrations = [
       CREATE INDEX IF NOT EXISTS idx_cards_session ON cards(session_id, updated_cursor);
       CREATE INDEX IF NOT EXISTS idx_events_session ON card_events(session_id, cursor, event_id);
     `
+  },
+  {
+    version: 2,
+    sql: `CREATE INDEX IF NOT EXISTS idx_sessions_source_host ON sessions(source_host, updated_at);`
   }
 ];
