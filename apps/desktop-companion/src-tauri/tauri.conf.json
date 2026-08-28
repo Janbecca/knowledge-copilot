@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Knowledge Copilot",
+  "version": "0.1.0",
+  "identifier": "xyz.knowledge-copilot.companion",
+  "build": {
+    "beforeDevCommand": "npm run dev:desktop-ui",
+    "devUrl": "http://localhost:5174",
+    "beforeBuildCommand": "npm run build:desktop-ui",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Knowledge Copilot",
+        "width": 420,
+        "height": 720,
+        "minWidth": 340,
+        "minHeight": 420,
+        "center": true,
+        "alwaysOnTop": true,
+        "decorations": false,
+        "resizable": true,
+        "shadow": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; frame-src https://knowledge-copilot.xyz; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'",
+      "capabilities": ["desktop-window"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true }
+    }
+  }
+}
