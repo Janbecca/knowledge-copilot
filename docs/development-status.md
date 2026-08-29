@@ -85,6 +85,7 @@ The selected mode is persisted on the session, so ChatGPT MCP Apps, the standalo
 - ChatGPT adapter on 2026-08-29: Manifest V3 scripts pass JavaScript syntax validation; permissions are limited to `storage`, `nativeMessaging`, and `https://chatgpt.com/*`; device capture without matching per-conversation consent returns 403 in the signed OIDC HTTP integration test.
 - Claude Code adapter on 2026-08-29: official `UserPromptSubmit`, `Stop`, and `SessionEnd` command-hook bridge implemented; JavaScript syntax and native Rust bridge compilation passed. `server_llm` forwards completed turns, while `host_structured` feeds a scoped instruction back to Claude to call the MCP structured-capture tool.
 - Final repository verification on 2026-08-29: repository policy, TypeScript typecheck, 13 test files/36 tests, panel + desktop UI + server build, standalone plugin packaging, and the 16-tool MCP smoke contract all passed in one `npm run verify` run.
+- Local Windows acceptance on 2026-08-29: the rebuilt NSIS package installed successfully to `D:\Knowledge Copilot` and launched the `Knowledge Copilot` desktop window. Chrome's protected `chrome://extensions` surface cannot be automated by the browser-control policy, so unpacked-extension loading and collection of the generated extension ID require a one-time user handoff before the Native Messaging registry entry can be installed.
 
 ## Live DeepSeek follow-up
 
