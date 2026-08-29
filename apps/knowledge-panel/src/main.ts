@@ -1,20 +1,332 @@
 import { App } from "@modelcontextprotocol/ext-apps";
 import "./style.css";
-type Card=any; type State={session:any;cursor:number;cards:Card[];learning_debts:Card[];recent_cards?:Card[]};
-const root=document.querySelector<HTMLDivElement>("#app")!;let state:State|null=null;let sessionId=new URLSearchParams(location.search).get("session")??localStorage.getItem("kc-session")??"";let since=Number(localStorage.getItem(`kc-seen-${sessionId}`)??0);let filter="all";let embedded=false;let mcp:App|null=null;let errorMessage="";
-const host=()=>((window as any).openai as {requestDisplayMode?:(input:{mode:"inline"|"pip"|"fullscreen"})=>Promise<unknown>;openExternal?:(input:{href:string;redirectUrl?:boolean})=>Promise<unknown>;setOpenInAppUrl?:(input:{href:string})=>void}|undefined);
-const standaloneUrl=()=>`https://knowledge-copilot.xyz/app/?session=${encodeURIComponent(sessionId)}`;
-async function requestMode(mode:"inline"|"pip"|"fullscreen"){const api=host();if(!api?.requestDisplayMode)throw new Error("当前 ChatGPT 客户端不支持此显示模式");await api.requestDisplayMode({mode});}
-async function openStandalone(){const href=standaloneUrl();const api=host();if(api?.openExternal){await api.openExternal({href,redirectUrl:false});return;}window.open(href,"_blank","noopener,noreferrer");}
-const eventLabel=(c:Card)=>c.lifecycle==="superseded"?"已替换":c.lifecycle==="discarded"?"已废弃":c.revision>1?"已修订":c.revision===1?"新增":"";
-function cardView(c:Card){return `<details class="card ${c.lifecycle} revision-${c.revision}"><summary><span class="kind">${c.type}</span><b>${esc(c.title)}</b><span class="event">${eventLabel(c)}</span></summary><p>${esc(c.summary)}</p>${c.operation?`<dl><dt>实际作用</dt><dd>${esc(c.operation.actual_effect)}</dd><dt>目的</dt><dd>${esc(c.operation.current_purpose)}</dd><dt>机制</dt><dd>${esc(c.operation.mechanism)}</dd><dt>验证</dt><dd>${esc(c.operation.verification.join("；"))}</dd><dt>风险</dt><dd>${esc(c.operation.risks.join("；"))}</dd><dt>可逆性</dt><dd>${c.operation.reversibility}</dd></dl>`:""}${c.learning_debt?`<p class="debt">${esc(c.learning_debt.question)} · ${c.learning_debt.recommended_stage}</p>`:""}<div class="sources">来源：${c.provenance.map((p:any)=>esc(p.turn_ref)).join("、")}</div><button data-status="mastered" data-id="${c.card_id}">已掌握</button><button data-status="review" data-id="${c.card_id}">待复习</button></details>`}
-function esc(x:string){const d=document.createElement("div");d.textContent=x??"";return d.innerHTML;}function attr(x:string){return esc(x).replace(/"/g,"&quot;");}
-function errorView(){return errorMessage?`<p class="error" role="alert">${esc(errorMessage)}</p>`:"";}
-function render(){if(!state){root.innerHTML=`<main><h1>对话知识副驾驶</h1><p>创建或输入会话 ID。面板只显示显式捕获并持久化的数据。</p>${errorView()}<form id="start"><input id="title" placeholder="会话标题（可选）"><button>创建会话</button></form><form id="open"><input id="sid" placeholder="session_id"><button>打开</button></form></main>`;bind();return;}
- const all=state.cards.filter(c=>filter==="all"||c.type===filter);const fresh=(state.recent_cards??[]).filter(c=>(filter==="all"||c.type===filter)&&c.lifecycle==="active");
- root.innerHTML=`<main>${errorView()}<header><div><p class="eyebrow">REAL CURSOR ${state.cursor}</p><form id="rename" class="rename"><input id="rename-title" value="${attr(state.session.title)}" aria-label="会话标题"><button>改名</button></form><p class="session-id">${esc(state.session.session_id)}</p><p>${state.session.status} · ${esc(state.session.capture_scope.topic??"全部主题")}</p></div><div class="panel-actions"><button id="pip">悬浮</button><button id="fullscreen">全屏</button><button id="external">新窗口</button><button id="toggle">${state.session.status==="active"?"暂停":"恢复"}</button><button id="refresh">刷新</button></div></header><nav>${["all","concept","principle","method","operation","framework","correction","learning_debt"].map(t=>`<button data-filter="${t}" class="${filter===t?"active":""}">${t}</button>`).join("")}</nav><section><h2>本轮新增 <span>${fresh.length}</span></h2><div class="grid">${fresh.map(cardView).join("")||"<p class=empty>正在持续监听已授权的知识捕获；下一轮完成后会自动刷新。</p>"}</div><button id="mark-seen">只看新增边界标记为 ${state.cursor}</button></section><section><h2>全部知识</h2><div class="grid">${all.map(cardView).join("")||"<p class=empty>暂无卡片。完成一轮有实质信息的问答后将自动沉淀。</p>"}</div></section><section><h2>待深挖</h2>${state.learning_debts.map(cardView).join("")||"<p class=empty>暂无学习债务。</p>"}</section><section><h2>笔记与思维导图</h2><div class="exports"><button data-export="markdown">Markdown 笔记</button><button data-export="mermaid">Mermaid 思维导图</button><button data-export="json">JSON 完整导出</button></div><pre id="export"></pre></section><details><summary>开发调试：提交一轮</summary><form id="capture"><textarea id="user" placeholder="用户消息"></textarea><textarea id="assistant" placeholder="助手消息"></textarea><button>捕获完成轮次</button></form></details></main>`;bind();}
-async function call(name:string,args:any){if(embedded&&mcp){const r=await mcp.callServerTool({name,arguments:args});const text=(r.content as any[])?.find(x=>x.type==="text")?.text;const parsed=text?JSON.parse(text):r.structuredContent;if(r.isError)throw new Error(parsed?.error?.message??"操作失败");return parsed;}const routes:any={start_learning_session:["/api/sessions","POST"],rename_learning_session:[`/api/sessions/${args.session_id}/title`,"POST"],capture_conversation_turn:[`/api/sessions/${args.session_id}/capture`,"POST"],get_learning_session:[`/api/sessions/${args.session_id}`,"GET"],list_knowledge_cards:[`/api/sessions/${args.session_id}/cards?since_cursor=${args.since_cursor??0}&include_inactive=${args.include_inactive??false}`,"GET"],change_capture_status:[`/api/sessions/${args.session_id}/status`,"POST"],change_card_learning_status:[`/api/cards/${args.card_id}/status`,"POST"],export_learning_package:[`/api/sessions/${args.session_id}/export/${args.format}`,"GET"]};const [url,method]=routes[name];const copy={...args};delete copy.session_id;delete copy.card_id;delete copy.format;const r=await fetch(url,{method,headers:{"content-type":"application/json"},body:method==="GET"?undefined:JSON.stringify(copy)});const payload=await r.json();if(!r.ok)throw new Error(payload.error??"操作失败");return payload;}
-async function load(){if(!sessionId){state=null;render();return;}state=await call("get_learning_session",{session_id:sessionId});const recent=await call("list_knowledge_cards",{session_id:sessionId,since_cursor:since,include_inactive:true});state!.recent_cards=recent.cards;localStorage.setItem("kc-session",sessionId);render();}
-async function act(operation:()=>Promise<void>){errorMessage="";try{await operation();}catch(error){errorMessage=error instanceof Error?error.message:"操作失败";render();}}
-function bind(){document.querySelector<HTMLFormElement>("#start")?.addEventListener("submit",e=>{e.preventDefault();void act(async()=>{const title=(document.querySelector<HTMLInputElement>("#title")!).value.trim()||undefined;const s=await call("start_learning_session",{title,source_host:embedded?"mcp-app":"preview"});sessionId=s.session_id;since=0;await load();});});document.querySelector<HTMLFormElement>("#open")?.addEventListener("submit",e=>{e.preventDefault();void act(async()=>{sessionId=(document.querySelector<HTMLInputElement>("#sid")!).value.trim();since=Number(localStorage.getItem(`kc-seen-${sessionId}`)??0);await load();});});document.querySelector<HTMLFormElement>("#rename")?.addEventListener("submit",e=>{e.preventDefault();void act(async()=>{await call("rename_learning_session",{session_id:sessionId,title:(document.querySelector<HTMLInputElement>("#rename-title")!).value});await load();});});document.querySelector("#pip")?.addEventListener("click",()=>void act(()=>requestMode("pip")));document.querySelector("#fullscreen")?.addEventListener("click",()=>void act(()=>requestMode("fullscreen")));document.querySelector("#external")?.addEventListener("click",()=>void act(openStandalone));document.querySelector("#refresh")?.addEventListener("click",()=>void act(load));document.querySelector("#toggle")?.addEventListener("click",()=>void act(async()=>{await call("change_capture_status",{session_id:sessionId,status:state!.session.status==="active"?"paused":"active"});await load();}));document.querySelector("#mark-seen")?.addEventListener("click",()=>{since=state!.cursor;localStorage.setItem(`kc-seen-${sessionId}`,String(since));render();});document.querySelectorAll<HTMLElement>("[data-filter]").forEach(b=>b.onclick=()=>{filter=b.dataset.filter!;render();});document.querySelectorAll<HTMLElement>("[data-status]").forEach(b=>b.onclick=()=>void act(async()=>{await call("change_card_learning_status",{card_id:b.dataset.id,status:b.dataset.status});await load();}));document.querySelectorAll<HTMLElement>("[data-export]").forEach(b=>b.onclick=()=>void act(async()=>{const x=await call("export_learning_package",{session_id:sessionId,format:b.dataset.export});document.querySelector("#export")!.textContent=x.content;}));document.querySelector<HTMLFormElement>("#capture")?.addEventListener("submit",e=>{e.preventDefault();void act(async()=>{await call("capture_conversation_turn",{session_id:sessionId,user_message:(document.querySelector<HTMLTextAreaElement>("#user")!).value,assistant_message:(document.querySelector<HTMLTextAreaElement>("#assistant")!).value,source_reference:`preview-${Date.now()}`});await load();});});}
-embedded=window.parent!==window&&new URLSearchParams(location.search).get("desktop")!=="1";if(embedded){try{mcp=new App({name:"Knowledge Copilot Panel",version:"0.3.0"});mcp.ontoolresult=r=>{const text=(r.content as any[])?.find(x=>x.type==="text")?.text;if(text){const parsed=JSON.parse(text);if(parsed.session){state=parsed;sessionId=parsed.session.session_id;localStorage.setItem("kc-session",sessionId);host()?.setOpenInAppUrl?.({href:standaloneUrl()});render();}}};await mcp.connect();await requestMode("pip").catch(()=>undefined);}catch{embedded=false;mcp=null;}}await act(load);window.setInterval(()=>{if(embedded&&sessionId&&document.visibilityState!=="hidden")void act(load);},8000);
+
+type ExtractionMode = "host_structured" | "server_llm";
+type Card = any;
+type State = {
+  session: {
+    session_id: string;
+    title: string;
+    status: "active" | "paused" | "ended";
+    extraction_mode: ExtractionMode;
+    capture_scope: { mode: "all" | "topic"; topic: string | null };
+  };
+  cursor: number;
+  cards: Card[];
+  learning_debts: Card[];
+  recent_cards?: Card[];
+};
+
+const root = document.querySelector<HTMLDivElement>("#app")!;
+const query = new URLSearchParams(location.search);
+let state: State | null = null;
+let sessionId = query.get("session") ?? localStorage.getItem("kc-session") ?? "";
+let since = Number(localStorage.getItem(`kc-seen-${sessionId}`) ?? 0);
+let filter = "all";
+let embedded = false;
+let mcp: App | null = null;
+let errorMessage = "";
+
+const host = () => (window as any).openai as {
+  requestDisplayMode?: (input: { mode: "inline" | "pip" | "fullscreen" }) => Promise<unknown>;
+  openExternal?: (input: { href: string; redirectUrl?: boolean }) => Promise<unknown>;
+  setOpenInAppUrl?: (input: { href: string }) => void;
+} | undefined;
+
+const standaloneUrl = () => `https://knowledge-copilot.xyz/app/?session=${encodeURIComponent(sessionId)}`;
+
+async function requestMode(mode: "inline" | "pip" | "fullscreen") {
+  const api = host();
+  if (!api?.requestDisplayMode) throw new Error("当前 ChatGPT 客户端不支持此显示模式");
+  await api.requestDisplayMode({ mode });
+}
+
+async function openStandalone() {
+  const href = standaloneUrl();
+  const api = host();
+  if (api?.openExternal) {
+    await api.openExternal({ href, redirectUrl: false });
+    return;
+  }
+  window.open(href, "_blank", "noopener,noreferrer");
+}
+
+function esc(value: string) {
+  const element = document.createElement("div");
+  element.textContent = value ?? "";
+  return element.innerHTML;
+}
+
+function attr(value: string) {
+  return esc(value).replace(/"/g, "&quot;");
+}
+
+function eventLabel(card: Card) {
+  if (card.lifecycle === "superseded") return "已替换";
+  if (card.lifecycle === "discarded") return "已废弃";
+  if (card.revision > 1) return "已修订";
+  return card.revision === 1 ? "新增" : "";
+}
+
+function cardView(card: Card) {
+  return `<details class="card ${card.lifecycle} revision-${card.revision}">
+    <summary><span class="kind">${card.type}</span><b>${esc(card.title)}</b><span class="event">${eventLabel(card)}</span></summary>
+    <p>${esc(card.summary)}</p>
+    ${card.operation ? `<dl><dt>实际作用</dt><dd>${esc(card.operation.actual_effect)}</dd><dt>目的</dt><dd>${esc(card.operation.current_purpose)}</dd><dt>机制</dt><dd>${esc(card.operation.mechanism)}</dd><dt>验证</dt><dd>${esc(card.operation.verification.join("；"))}</dd><dt>风险</dt><dd>${esc(card.operation.risks.join("；"))}</dd><dt>可逆性</dt><dd>${card.operation.reversibility}</dd></dl>` : ""}
+    ${card.learning_debt ? `<p class="debt">${esc(card.learning_debt.question)} · ${card.learning_debt.recommended_stage}</p>` : ""}
+    <div class="sources">来源：${card.provenance.map((item: any) => esc(item.turn_ref)).join("、")}</div>
+    <button data-status="mastered" data-id="${card.card_id}">已掌握</button>
+    <button data-status="review" data-id="${card.card_id}">待复习</button>
+  </details>`;
+}
+
+function errorView() {
+  return errorMessage ? `<p class="error" role="alert">${esc(errorMessage)}</p>` : "";
+}
+
+function modeChooser(selected: ExtractionMode, location: "create" | "session") {
+  const label = location === "create" ? "创建模式" : "提取方式";
+  return `<div class="mode-card" aria-label="${label}">
+    <div class="mode-options">
+      <button type="button" data-mode="host_structured" class="${selected === "host_structured" ? "selected" : ""}">
+        <b>当前 AI 直接整理</b><small>不额外调用模型，AI 提交结构化知识点</small>
+      </button>
+      <button type="button" data-mode="server_llm" class="${selected === "server_llm" ? "selected" : ""}">
+        <b>服务器 LLM</b><small>将脱敏后的本轮对话交给自配模型提取</small>
+      </button>
+    </div>
+  </div>`;
+}
+
+function debugCaptureView(mode: ExtractionMode) {
+  const structured = mode === "host_structured";
+  return `<details>
+    <summary>开发调试：提交一轮</summary>
+    <form id="capture">
+      <p class="mode-help">${structured
+        ? "正常使用时由当前对话 AI 自动提交。手工测试可填写下方结构化知识点 JSON。"
+        : "本轮原文会在本地脱敏后发送给服务器配置的 LLM。"}</p>
+      <textarea id="user" placeholder="用户消息" required></textarea>
+      <textarea id="assistant" placeholder="助手消息" required></textarea>
+      ${structured ? `<textarea id="knowledge-items" class="code-input" placeholder='[{"type":"concept","title":"标题","summary":"摘要"}]' required></textarea>` : ""}
+      <button>捕获完成轮次</button>
+    </form>
+  </details>`;
+}
+
+function render() {
+  if (!state) {
+    const initialMode = (localStorage.getItem("kc-new-mode") as ExtractionMode | null) ?? "host_structured";
+    root.innerHTML = `<main class="welcome">
+      <h1>对话知识副驾驶</h1>
+      <p>创建或输入会话 ID。面板只显示显式捕获并持久化的数据。</p>
+      ${errorView()}
+      <form id="start">
+        <input id="title" placeholder="会话标题（可选）">
+        ${modeChooser(initialMode, "create")}
+        <input id="initial-mode" type="hidden" value="${initialMode}">
+        <button>创建会话</button>
+      </form>
+      <form id="open"><input id="sid" placeholder="session_id"><button>打开</button></form>
+    </main>`;
+    bind();
+    return;
+  }
+
+  const mode = state.session.extraction_mode;
+  const all = state.cards.filter(card => filter === "all" || card.type === filter);
+  const fresh = (state.recent_cards ?? []).filter(card => (filter === "all" || card.type === filter) && card.lifecycle === "active");
+  root.innerHTML = `<main>
+    ${errorView()}
+    <header>
+      <div>
+        <p class="eyebrow">REAL CURSOR ${state.cursor}</p>
+        <form id="rename" class="rename"><input id="rename-title" value="${attr(state.session.title)}" aria-label="会话标题"><button>改名</button></form>
+        <p class="session-id">${esc(state.session.session_id)}</p>
+        <p>${state.session.status} · ${esc(state.session.capture_scope.topic ?? "全部主题")}</p>
+      </div>
+      <div class="panel-actions"><button id="pip">悬浮</button><button id="fullscreen">全屏</button><button id="external">新窗口</button><button id="toggle">${state.session.status === "active" ? "暂停" : "恢复"}</button><button id="refresh">刷新</button></div>
+    </header>
+    <section class="mode-section">
+      <div><p class="eyebrow dark">EXTRACTION MODE</p><h2>知识提取方式</h2></div>
+      ${modeChooser(mode, "session")}
+      <p class="mode-help">${mode === "host_structured"
+        ? "当前对话 AI 负责理解和整理，服务器只校验与保存，不产生第二次模型调用。"
+        : "服务器使用你配置的 LLM 处理脱敏后的原始对话；会产生 API 调用费用。"}</p>
+    </section>
+    <nav>${["all", "concept", "principle", "method", "operation", "framework", "correction", "learning_debt"].map(type => `<button data-filter="${type}" class="${filter === type ? "active" : ""}">${type}</button>`).join("")}</nav>
+    <section><h2>本轮新增 <span>${fresh.length}</span></h2><div class="grid">${fresh.map(cardView).join("") || "<p class=empty>等待下一轮已授权的知识捕获。</p>"}</div><button id="mark-seen">只看新增边界标记为 ${state.cursor}</button></section>
+    <section><h2>全部知识</h2><div class="grid">${all.map(cardView).join("") || "<p class=empty>暂无卡片。完成一轮有实质信息的问答后将自动沉淀。</p>"}</div></section>
+    <section><h2>待深挖</h2>${state.learning_debts.map(cardView).join("") || "<p class=empty>暂无学习债务。</p>"}</section>
+    <section><h2>笔记与思维导图</h2><div class="exports"><button data-export="markdown">Markdown 笔记</button><button data-export="mermaid">Mermaid 思维导图</button><button data-export="json">JSON 完整导出</button></div><pre id="export"></pre></section>
+    ${debugCaptureView(mode)}
+  </main>`;
+  bind();
+}
+
+async function call(name: string, args: any) {
+  if (embedded && mcp) {
+    const response = await mcp.callServerTool({ name, arguments: args });
+    const text = (response.content as any[])?.find(item => item.type === "text")?.text;
+    const parsed = text ? JSON.parse(text) : response.structuredContent;
+    if (response.isError) throw new Error(parsed?.error?.message ?? "操作失败");
+    return parsed;
+  }
+  const routes: Record<string, [string, string]> = {
+    start_learning_session: ["/api/sessions", "POST"],
+    rename_learning_session: [`/api/sessions/${args.session_id}/title`, "POST"],
+    capture_conversation_turn: [`/api/sessions/${args.session_id}/capture`, "POST"],
+    get_learning_session: [`/api/sessions/${args.session_id}`, "GET"],
+    list_knowledge_cards: [`/api/sessions/${args.session_id}/cards?since_cursor=${args.since_cursor ?? 0}&include_inactive=${args.include_inactive ?? false}`, "GET"],
+    change_capture_status: [`/api/sessions/${args.session_id}/status`, "POST"],
+    change_extraction_mode: [`/api/sessions/${args.session_id}/extraction-mode`, "POST"],
+    change_card_learning_status: [`/api/cards/${args.card_id}/status`, "POST"],
+    export_learning_package: [`/api/sessions/${args.session_id}/export/${args.format}`, "GET"],
+  };
+  const [url, method] = routes[name];
+  const payload = { ...args };
+  delete payload.session_id;
+  delete payload.card_id;
+  delete payload.format;
+  const response = await fetch(url, { method, headers: { "content-type": "application/json" }, body: method === "GET" ? undefined : JSON.stringify(payload) });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error ?? "操作失败");
+  return result;
+}
+
+async function load() {
+  if (!sessionId) {
+    state = null;
+    render();
+    return;
+  }
+  state = await call("get_learning_session", { session_id: sessionId });
+  const recent = await call("list_knowledge_cards", { session_id: sessionId, since_cursor: since, include_inactive: true });
+  state!.recent_cards = recent.cards;
+  localStorage.setItem("kc-session", sessionId);
+  render();
+}
+
+async function act(operation: () => Promise<void>) {
+  errorMessage = "";
+  try {
+    await operation();
+  } catch (error) {
+    errorMessage = error instanceof Error ? error.message : "操作失败";
+    render();
+  }
+}
+
+function bind() {
+  document.querySelector<HTMLFormElement>("#start")?.addEventListener("submit", event => {
+    event.preventDefault();
+    void act(async () => {
+      const title = document.querySelector<HTMLInputElement>("#title")!.value.trim() || undefined;
+      const extractionMode = document.querySelector<HTMLInputElement>("#initial-mode")!.value as ExtractionMode;
+      const session = await call("start_learning_session", { title, extraction_mode: extractionMode, source_host: embedded ? "mcp-app" : "preview" });
+      sessionId = session.session_id;
+      since = 0;
+      await load();
+    });
+  });
+  document.querySelector<HTMLFormElement>("#open")?.addEventListener("submit", event => {
+    event.preventDefault();
+    void act(async () => {
+      sessionId = document.querySelector<HTMLInputElement>("#sid")!.value.trim();
+      since = Number(localStorage.getItem(`kc-seen-${sessionId}`) ?? 0);
+      await load();
+    });
+  });
+  document.querySelector<HTMLFormElement>("#rename")?.addEventListener("submit", event => {
+    event.preventDefault();
+    void act(async () => {
+      await call("rename_learning_session", { session_id: sessionId, title: document.querySelector<HTMLInputElement>("#rename-title")!.value });
+      await load();
+    });
+  });
+  document.querySelectorAll<HTMLElement>("[data-mode]").forEach(button => {
+    button.onclick = () => void act(async () => {
+      const extractionMode = button.dataset.mode as ExtractionMode;
+      if (!state) {
+        localStorage.setItem("kc-new-mode", extractionMode);
+        document.querySelector<HTMLInputElement>("#initial-mode")!.value = extractionMode;
+        render();
+        return;
+      }
+      if (extractionMode === state.session.extraction_mode) return;
+      await call("change_extraction_mode", { session_id: sessionId, extraction_mode: extractionMode });
+      await load();
+    });
+  });
+  document.querySelector("#pip")?.addEventListener("click", () => void act(() => requestMode("pip")));
+  document.querySelector("#fullscreen")?.addEventListener("click", () => void act(() => requestMode("fullscreen")));
+  document.querySelector("#external")?.addEventListener("click", () => void act(openStandalone));
+  document.querySelector("#refresh")?.addEventListener("click", () => void act(load));
+  document.querySelector("#toggle")?.addEventListener("click", () => void act(async () => {
+    await call("change_capture_status", { session_id: sessionId, status: state!.session.status === "active" ? "paused" : "active" });
+    await load();
+  }));
+  document.querySelector("#mark-seen")?.addEventListener("click", () => {
+    since = state!.cursor;
+    localStorage.setItem(`kc-seen-${sessionId}`, String(since));
+    render();
+  });
+  document.querySelectorAll<HTMLElement>("[data-filter]").forEach(button => {
+    button.onclick = () => { filter = button.dataset.filter!; render(); };
+  });
+  document.querySelectorAll<HTMLElement>("[data-status]").forEach(button => {
+    button.onclick = () => void act(async () => {
+      await call("change_card_learning_status", { card_id: button.dataset.id, status: button.dataset.status });
+      await load();
+    });
+  });
+  document.querySelectorAll<HTMLElement>("[data-export]").forEach(button => {
+    button.onclick = () => void act(async () => {
+      const exported = await call("export_learning_package", { session_id: sessionId, format: button.dataset.export });
+      document.querySelector("#export")!.textContent = exported.content;
+    });
+  });
+  document.querySelector<HTMLFormElement>("#capture")?.addEventListener("submit", event => {
+    event.preventDefault();
+    void act(async () => {
+      const payload: Record<string, unknown> = {
+        session_id: sessionId,
+        user_message: document.querySelector<HTMLTextAreaElement>("#user")!.value,
+        assistant_message: document.querySelector<HTMLTextAreaElement>("#assistant")!.value,
+        source_reference: `preview-${Date.now()}`,
+      };
+      if (state!.session.extraction_mode === "host_structured") {
+        payload.knowledge_items = JSON.parse(document.querySelector<HTMLTextAreaElement>("#knowledge-items")!.value);
+      }
+      await call("capture_conversation_turn", payload);
+      await load();
+    });
+  });
+}
+
+embedded = window.parent !== window && query.get("desktop") !== "1";
+if (embedded) {
+  try {
+    mcp = new App({ name: "Knowledge Copilot Panel", version: "0.4.0" });
+    mcp.ontoolresult = response => {
+      const text = (response.content as any[])?.find(item => item.type === "text")?.text;
+      if (!text) return;
+      const parsed = JSON.parse(text);
+      if (!parsed.session) return;
+      state = parsed;
+      sessionId = parsed.session.session_id;
+      localStorage.setItem("kc-session", sessionId);
+      host()?.setOpenInAppUrl?.({ href: standaloneUrl() });
+      render();
+    };
+    await mcp.connect();
+    await requestMode("pip").catch(() => undefined);
+  } catch {
+    embedded = false;
+    mcp = null;
+  }
+}
+await act(load);
+window.setInterval(() => {
+  if (embedded && sessionId && document.visibilityState !== "hidden") void act(load);
+}, 8000);

@@ -39,5 +39,9 @@ export const migrations = [
   {
     version: 2,
     sql: `CREATE INDEX IF NOT EXISTS idx_sessions_source_host ON sessions(source_host, updated_at);`
+  },
+  {
+    version: 3,
+    sql: `ALTER TABLE sessions ADD COLUMN extraction_mode TEXT NOT NULL DEFAULT 'host_structured' CHECK(extraction_mode IN ('host_structured','server_llm'));`
   }
 ];

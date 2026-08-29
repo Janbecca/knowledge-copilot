@@ -10,7 +10,7 @@
 
 ## 当前实现状态
 
-- **已实现并可本地验证**：v2 卡片协议、六种生命周期事件、真实 cursor、幂等轮次、SQLite迁移、mock extractor、可配置 LLM extractor、14 个 MCP 工具、ChatGPT 会话绑定、PiP/全屏/独立窗口面板、Windows 置顶桌面伴侣外壳、Streamable HTTP/stdio、Markdown/Mermaid/JSON导出、自动测试。
+- **已实现并可本地验证**：v2 卡片协议、六种生命周期事件、真实 cursor、幂等轮次、SQLite迁移、可切换的“当前 AI 直接整理/服务器 LLM”双模式、15 个 MCP 工具、ChatGPT 会话绑定、PiP/全屏/独立窗口面板、Windows 置顶桌面伴侣外壳、Streamable HTTP/stdio、Markdown/Mermaid/JSON导出、自动测试。
 - **已实现但待真实产品验证**：Codex/Claude/WorkBuddy 的薄配置样例；MCP App在具体商业宿主中的渲染。
 - **已实际验证的标准环境**：本地 HTTP/stdio MCP Server、独立 UI 预览；MCP Apps官方协议形态。详见 `docs/testing.md`。
 - **受宿主限制**：逐轮自动调用依赖宿主 lifecycle hook 或 agent行为；ChatGPT 中选择应用只作用于当前消息，固定侧栏和跨消息被动监听都不是 MCP Apps 的通用能力。桌面伴侣负责持续显示，不会绕过宿主权限读取对话。
@@ -93,11 +93,18 @@ docker run --rm -p 3210:3210 -e KNOWLEDGE_COPILOT_EXTRACTOR=mock knowledge-copil
 
 公网测试环境使用 `compose.yaml` 与 Caddy 自动终止 HTTPS。域名、DNS 和部署步骤见 [部署指南](docs/deployment.md)。SQLite 卷仅适合单实例 Beta；进入 M2 后生产主库将迁移到托管关系型数据库。
 
-工具：`start_learning_session`、`rename_learning_session`、`capture_conversation_turn`、`capture_active_learning_turn`、`get_learning_session`、`list_knowledge_cards`、`get_knowledge_card`、`revise_knowledge_card`、`change_capture_status`、`change_card_learning_status`、`list_learning_debts`、`export_learning_package`，以及 UI 工具 `launch_knowledge_copilot`、`open_knowledge_panel`。
+工具：`start_learning_session`、`rename_learning_session`、`capture_conversation_turn`、`capture_active_learning_turn`、`get_learning_session`、`list_knowledge_cards`、`get_knowledge_card`、`revise_knowledge_card`、`change_capture_status`、`change_extraction_mode`、`change_card_learning_status`、`list_learning_debts`、`export_learning_package`，以及 UI 工具 `launch_knowledge_copilot`、`open_knowledge_panel`。
 
 在 ChatGPT 中，首次调用 `launch_knowledge_copilot` 会将学习会话绑定到当前匿名对话标识，并请求展示面板。ChatGPT 的应用选择只作用于当前消息；后续消息若没有再次选择应用，不能保证继续调用 `capture_active_learning_turn`。这是一套工具调用约定，并非能够被 MCP 应用绕过宿主权限实现的被动消息监听。桌面伴侣可以让笔记窗口持续可见，但不能改变这个调用边界。
 
 ## 真实模型配置
+
+每个会话可在前端切换两种提取方式：
+
+- **当前 AI 直接整理**（默认）：正在对话的 AI 生成 `knowledge_items`，服务端只校验并保存，不产生第二次模型调用。
+- **服务器 LLM**：服务端把已脱敏的完整轮次发送给自配的 OpenAI 兼容模型，并根据返回结果创建或更新卡片。
+
+模式保存在会话中，网页、ChatGPT 面板和桌面伴侣看到的是同一设置；API Key 只存在于服务器环境中，不会发送到前端。
 
 复制 `.env.example` 的值到当前进程环境，至少设置：
 
@@ -109,6 +116,14 @@ KNOWLEDGE_COPILOT_MODEL=your-model-id
 ```
 
 模型名、Key和Base URL均不写死。结构化输出先经 v2 schema 验证，有限修复后仍失败则整轮卡片更新回滚。日志不打印 Key。
+
+DeepSeek 示例（不要把真实 Key 写进仓库）：
+
+```text
+KNOWLEDGE_COPILOT_EXTRACTOR=llm
+KNOWLEDGE_COPILOT_BASE_URL=https://api.deepseek.com
+KNOWLEDGE_COPILOT_MODEL=deepseek-v4-flash
+```
 
 ## 数据与隐私
 
