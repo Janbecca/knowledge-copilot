@@ -1,2 +1,31 @@
-import { describe,expect,it } from "vitest";import { service } from "../helpers.js";
-describe("card lifecycle",()=>{it("supersedes a disproved troubleshooting conclusion",async()=>{const {store,service:s}=service();const session=s.start();await s.capture({session_id:session.session_id,user_message:"怀疑网络故障",assistant_message:"先作为低置信假设"});await s.capture({session_id:session.session_id,user_message:"连接测试通过，但证书时间校验失败",assistant_message:"结论改为系统时钟导致 TLS 失败"});const cards=store.listCards(session.session_id,{includeInactive:true});expect(cards.find(c=>c.tags.includes("network-hypothesis"))?.lifecycle).toBe("superseded");expect(cards.find(c=>c.tags.includes("tls-clock"))?.lifecycle).toBe("active");store.close();});it("supports explicit merge revise discard and status history",async()=>{const {store,service:s}=service();const session=s.start();await s.capture({session_id:session.session_id,user_message:"钩子和个人 IP",assistant_message:"脚本结构与完播率"});await s.capture({session_id:session.session_id,user_message:"合并：重复框架",assistant_message:"合并"});const active=store.listCards(session.session_id);expect(active.length).toBe(1);const c=active[0]!;s.revise({card_id:c.card_id,expected_revision:c.revision,patch:{summary:"人工修订"},reason:"test"});s.changeLearningStatus({card_id:c.card_id,status:"review"});expect(s.getCard(c.card_id).revisions.length).toBeGreaterThanOrEqual(3);await s.capture({session_id:session.session_id,user_message:"废弃：当前项",assistant_message:"废弃"});expect(store.getCard(c.card_id)?.lifecycle).toBe("discarded");store.close();});});
+import { describe, expect, it } from "vitest";
+import { service } from "../helpers.js";
+
+describe("card lifecycle", () => {
+  it("supersedes a disproved troubleshooting conclusion", async () => {
+    const { store, service: s } = service();
+    const session = s.start({ extraction_mode: "server_llm" });
+    await s.capture({ session_id: session.session_id, user_message: "怀疑网络故障", assistant_message: "先作为低置信假设" });
+    await s.capture({ session_id: session.session_id, user_message: "连接测试通过，但证书时间校验失败", assistant_message: "结论改为系统时钟导致 TLS 失败" });
+    const cards = store.listCards(session.session_id, { includeInactive: true });
+    expect(cards.find(c => c.tags.includes("network-hypothesis"))?.lifecycle).toBe("superseded");
+    expect(cards.find(c => c.tags.includes("tls-clock"))?.lifecycle).toBe("active");
+    store.close();
+  });
+
+  it("supports explicit merge revise discard and status history", async () => {
+    const { store, service: s } = service();
+    const session = s.start({ extraction_mode: "server_llm" });
+    await s.capture({ session_id: session.session_id, user_message: "钩子和个人 IP", assistant_message: "脚本结构与完播率" });
+    await s.capture({ session_id: session.session_id, user_message: "合并：重复框架", assistant_message: "合并" });
+    const active = store.listCards(session.session_id);
+    expect(active.length).toBe(1);
+    const card = active[0]!;
+    s.revise({ card_id: card.card_id, expected_revision: card.revision, patch: { summary: "人工修订" }, reason: "test" });
+    s.changeLearningStatus({ card_id: card.card_id, status: "review" });
+    expect(s.getCard(card.card_id).revisions.length).toBeGreaterThanOrEqual(3);
+    await s.capture({ session_id: session.session_id, user_message: "废弃：当前项", assistant_message: "废弃" });
+    expect(store.getCard(card.card_id)?.lifecycle).toBe("discarded");
+    store.close();
+  });
+});

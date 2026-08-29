@@ -30,14 +30,14 @@ const destructiveTools = new Set([
   "change_capture_status", "change_card_learning_status",
 ]);
 const idempotentTools = new Set([
-  ...readTools, "capture_conversation_turn", "capture_active_learning_turn", "revise_knowledge_card", "rename_learning_session", "launch_knowledge_copilot",
+  ...readTools, "capture_conversation_turn", "capture_active_learning_turn", "revise_knowledge_card", "rename_learning_session", "change_extraction_mode", "launch_knowledge_copilot",
 ]);
 
 describe("MCP public tool contract", () => {
   it("declares output schemas and conservative risk annotations for every tool", async () => {
     const client = await harness();
     const listed = await client.listTools();
-    expect(listed.tools).toHaveLength(14);
+    expect(listed.tools).toHaveLength(15);
     for (const tool of listed.tools) {
       expect(tool.outputSchema).toMatchObject({ type: "object" });
       expect(tool.annotations?.openWorldHint).toBe(false);
@@ -99,6 +99,8 @@ describe("MCP public tool contract", () => {
     const started = await client.callTool({ name: "start_learning_session", arguments: { title: "Contract" } });
     const session = started.structuredContent as { session_id: string };
     expect(session.session_id).toMatch(/^session_/);
+    expect(session).toMatchObject({ extraction_mode: "host_structured" });
+    expect((await client.callTool({ name: "change_extraction_mode", arguments: { session_id: session.session_id, extraction_mode: "server_llm" } })).structuredContent).toMatchObject({ previous_extraction_mode: "host_structured", session: { extraction_mode: "server_llm" } });
     expect((await client.callTool({ name: "rename_learning_session", arguments: { session_id: session.session_id, title: "GPT 自主标题" } })).structuredContent).toMatchObject({ title: "GPT 自主标题" });
 
     const launched = await client.callTool({ name: "launch_knowledge_copilot", arguments: { title: "自动打开的笔记" } });

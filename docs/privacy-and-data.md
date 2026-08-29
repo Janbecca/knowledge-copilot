@@ -22,4 +22,4 @@ Basic pattern redaction cannot recognize every secret or personal datum. SQLite 
 - audit logging without raw sensitive payloads;
 - CSP/origin/auth controls for remote MCP and app resources.
 
-Remote model use sends the configured turn/card context to that endpoint under its own data policy. Mock mode makes no model API call.
+`host_structured` mode makes no second server-side model call: the host AI submits schema-valid knowledge items, and the server validates and saves them. `server_llm` mode sends the redacted completed turn and active-card context to the configured provider under that provider's data policy. Switching modes never exposes the provider API key to the browser. Mock extractor configuration makes no external model API call.

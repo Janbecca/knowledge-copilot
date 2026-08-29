@@ -12,6 +12,18 @@ M1 provides a single-instance Beta deployment. The application listens on plain 
 
 Do not put API keys or long-lived credentials in `compose.yaml` or Git. Inject them with the deployment platform's secret manager.
 
+To enable the per-session `server_llm` option, inject these server-only variables before starting Compose:
+
+```text
+KNOWLEDGE_COPILOT_EXTRACTOR=llm
+KNOWLEDGE_COPILOT_BASE_URL=https://api.deepseek.com
+KNOWLEDGE_COPILOT_API_KEY=<secret-manager-or-private-env-file>
+KNOWLEDGE_COPILOT_MODEL=deepseek-v4-flash
+KNOWLEDGE_COPILOT_MAX_REPAIRS=1
+```
+
+If the global extractor remains `mock`, the UI can still select `server_llm`, but it runs the deterministic development extractor. `/ready` reports the active extractor name. The default per-session mode remains `host_structured` regardless of provider configuration.
+
 ## Start
 
 ```powershell

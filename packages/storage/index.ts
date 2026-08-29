@@ -27,7 +27,8 @@ export class KnowledgeStore {
   close(): void { this.db.close(); }
   isReady(): boolean { return (this.db.prepare("SELECT 1 AS ready").get() as { ready: number } | undefined)?.ready === 1; }
   createSession(session: Session): Session {
-    this.db.prepare("INSERT INTO sessions VALUES(?,?,?,?,?,?,?,?)").run(session.session_id, session.title, session.status, JSON.stringify(session.capture_scope), session.created_at, session.updated_at, session.last_captured_turn, session.source_host);
+    this.db.prepare(`INSERT INTO sessions(session_id,title,status,capture_scope,created_at,updated_at,last_captured_turn,source_host,extraction_mode)
+      VALUES(?,?,?,?,?,?,?,?,?)`).run(session.session_id, session.title, session.status, JSON.stringify(session.capture_scope), session.created_at, session.updated_at, session.last_captured_turn, session.source_host, session.extraction_mode);
     return session;
   }
   getSession(id: string): Session | null {
@@ -39,8 +40,8 @@ export class KnowledgeStore {
     return r ? { ...r, capture_scope: JSON.parse(String(r.capture_scope)) } as Session : null;
   }
   updateSession(session: Session): void {
-    this.db.prepare("UPDATE sessions SET title=?,status=?,capture_scope=?,updated_at=?,last_captured_turn=?,source_host=? WHERE session_id=?")
-      .run(session.title, session.status, JSON.stringify(session.capture_scope), session.updated_at, session.last_captured_turn, session.source_host, session.session_id);
+    this.db.prepare("UPDATE sessions SET title=?,status=?,capture_scope=?,updated_at=?,last_captured_turn=?,source_host=?,extraction_mode=? WHERE session_id=?")
+      .run(session.title, session.status, JSON.stringify(session.capture_scope), session.updated_at, session.last_captured_turn, session.source_host, session.extraction_mode, session.session_id);
   }
   findTurnByKey(sessionId: string, key: string): Turn | null {
     const r = this.db.prepare("SELECT * FROM turns WHERE session_id=? AND idempotency_key=?").get(sessionId, key) as Record<string, unknown> | undefined;
