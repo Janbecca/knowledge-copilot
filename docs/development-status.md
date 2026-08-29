@@ -46,6 +46,13 @@ The selected mode is persisted on the session, so ChatGPT MCP Apps, the standalo
 - Real Playwright browser flow: created a `server_llm` session, switched it to `host_structured`, submitted a structured knowledge item, and observed cursor `0 -> 1` plus a rendered card.
 - `npm run verify:plugin`: passed for final and Beta standalone package copies.
 - `npm run test:mcp`: passed with 15 tools, declared contracts, cursor 1, and an operation card.
+
+## Live DeepSeek follow-up
+
+- Production credentials and `deepseek-v4-flash` were accepted by `GET /models`; the key was injected only through hidden SSH input.
+- The first live capture returned 504 because the old extractor asked for a full card-event schema without actually including that schema. DeepSeek returned a valid JSON object with the wrong event shape, triggering repair attempts behind Caddy's 30-second header timeout.
+- Fix in progress on `fix/deepseek-structured-output`: ask the model for the same compact, validated `knowledge_items` contract used by host mode, then let the trusted server map items to canonical IDs, provenance, add/revise events, and cards. Output is capped at 1600 tokens and active-card context is minimized.
+- Fix verification: typecheck passed; 11 test files and 32/32 tests passed; production build and 15-tool MCP smoke passed.
 - Added dedicated coverage for routing, no-extra-call host mode, server-mode precedence, retry atomicity, persisted mode switching, HTTP switching, and panel controls.
 
 ## Deployment target

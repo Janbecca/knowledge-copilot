@@ -40,6 +40,7 @@ Open `http://127.0.0.1:3210/app/` to verify the built panel against the same ser
 | Non-timeline export | export assertions and reconstructed heading order |
 | MCP annotations/output schemas/errors | `mcp-contract.test.ts` plus SDK smoke |
 | Dual extraction routing and retry atomicity | `extraction-mode.test.ts` |
+| LLM request contract, bounded repair, and sanitized HTTP errors | `llm-extractor.test.ts` |
 | UI mode switch and HTTP endpoint | `ui-contract.test.ts`, `http-runtime.test.ts` |
 
 Do not treat source inspection as runtime proof. Record actual command results here after every verification pass. External product-host testing remains separate from local server and browser-preview testing.
@@ -52,6 +53,7 @@ Do not treat source inspection as runtime proof. Record actual command results h
 - Production build: panel, desktop UI, and server TypeScript passed.
 - Playwright browser flow: created in server mode, switched to host mode, directly saved a structured concept, and observed cursor 1/card rendering.
 - Plugin package validation passed; MCP stdio smoke discovered 15 tools and completed a server-mode capture at cursor 1.
+- DeepSeek contract fix: 11 test files, 32/32 tests, production build, and 15-tool MCP smoke passed.
 
 ## Previous verification: 2026-08-25
 

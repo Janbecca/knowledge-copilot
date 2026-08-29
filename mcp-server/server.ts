@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { KnowledgeService } from "../packages/knowledge-engine/service.js";
+import { knowledgeItemSchema } from "../packages/knowledge-engine/model-knowledge.js";
 import { cardEventSchema, knowledgeCardSchema } from "../packages/card-protocol/index.js";
 import { captureScopeSchema, extractionModeSchema, sessionSchema, stableHash, turnSchema } from "../packages/shared/index.js";
 
@@ -34,7 +35,6 @@ const annotations={
 const revisionSchema=z.object({revision:z.number().int().positive(),event_type:z.string(),reason:z.string(),at_turn:z.string(),payload:knowledgeCardSchema,created_at:z.string()});
 const sessionStateSchema=z.object({session:sessionSchema,cursor:z.number().int().nonnegative(),cards:z.array(knowledgeCardSchema),learning_debts:z.array(knowledgeCardSchema)});
 const launchStateSchema=sessionStateSchema.extend({capture_policy:z.literal("continuous_until_paused"),next_tool:z.literal("capture_active_learning_turn")});
-const knowledgeItemSchema=z.object({type:z.enum(["concept","principle","method","operation","framework","correction","learning_debt"]),title:z.string().trim().min(1).max(120),summary:z.string().trim().min(1).max(1200),mechanism:z.string().max(1200).optional(),reasoning_chain:z.array(z.string().max(500)).max(8).optional(),boundary:z.string().max(800).optional(),transfer:z.array(z.string().max(500)).max(8).optional(),tags:z.array(z.string().max(60)).max(12).optional(),confidence:z.enum(["high","medium","low","unknown"]).optional()});
 const captureResultSchema=z.object({idempotent_replay:z.boolean(),turn:turnSchema,operations:z.array(cardEventSchema),new_cards:z.array(knowledgeCardSchema),changed_cards:z.array(knowledgeCardSchema),new_learning_debts:z.array(knowledgeCardSchema),cursor:z.number().int().positive(),session_status:z.enum(["active","paused","ended"])});
 const cardListSchema=z.object({cursor:z.number().int().nonnegative(),cards:z.array(knowledgeCardSchema)});
 const cardDetailSchema=z.object({card:knowledgeCardSchema,revisions:z.array(revisionSchema)});

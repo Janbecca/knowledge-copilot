@@ -2,13 +2,8 @@ import { knowledgeCardSchema, type CardEvent, type KnowledgeCard } from "../card
 import { reconstructExport, type ExportFormat } from "../export-engine/index.js";
 import { id, now, redact, stableHash, type ExtractionMode, type Session, type Turn } from "../shared/index.js";
 import { KnowledgeStore } from "../storage/index.js";
+import { modelKnowledgeItemsToEvents, type ModelKnowledgeItem } from "./model-knowledge.js";
 import type { KnowledgeExtractor } from "./types.js";
-
-export interface ModelKnowledgeItem {
-  type:"concept"|"principle"|"method"|"operation"|"framework"|"correction"|"learning_debt";
-  title:string; summary:string; mechanism?:string; reasoning_chain?:string[]; boundary?:string; transfer?:string[]; tags?:string[];
-  confidence?:"high"|"medium"|"low"|"unknown";
-}
 
 export class KnowledgeService {
   constructor(readonly store:KnowledgeStore,readonly extractor:KnowledgeExtractor){}
@@ -30,7 +25,7 @@ export class KnowledgeService {
     if(session.status==="active"){
       if(session.extraction_mode==="host_structured"){
         if(input.knowledge_items===undefined)throw new Error("host_structured mode requires knowledge_items from the host AI");
-        events=this.modelEvents(turn,input.knowledge_items,activeCards);
+        events=modelKnowledgeItemsToEvents(turn,input.knowledge_items,activeCards);
       }else{
         events=(await this.extractor.extract({session,turn,activeCards})).events;
       }
@@ -41,15 +36,6 @@ export class KnowledgeService {
     return {idempotent_replay:false,turn,operations:applied,...this.captureSummary(session,cursor)};
   }
   private captureSummary(session:Session,cursor:number){const cards=this.store.listCards(session.session_id,{sinceCursor:cursor-1,includeInactive:true});return {new_cards:cards.filter(c=>c.revision===1&&c.lifecycle==="active"),changed_cards:cards.filter(c=>c.revision>1||c.lifecycle!=="active"),new_learning_debts:cards.filter(c=>c.type==="learning_debt"&&c.lifecycle==="active"),cursor,session_status:session.status};}
-  private modelEvents(turn:Turn,items:ModelKnowledgeItem[],active:KnowledgeCard[]):CardEvent[]{return items.flatMap((item):CardEvent[]=>{
-    const title=redact(item.title.trim());const summary=redact(item.summary.trim());if(!title||!summary)return [];
-    const body={definition_or_claim:summary,mechanism:item.mechanism?redact(item.mechanism):null,reasoning_chain:(item.reasoning_chain??[]).map(redact),boundary:item.boundary?redact(item.boundary):null,transfer:(item.transfer??[]).map(redact)};
-    const tags=[...new Set((item.tags??[]).map(tag=>redact(tag.trim())).filter(Boolean))];
-    const existing=active.find(card=>card.lifecycle==="active"&&card.title.trim().toLocaleLowerCase()===title.toLocaleLowerCase());
-    if(existing){if(existing.summary===summary&&JSON.stringify(existing.body)===JSON.stringify(body))return [];return [{event:"revise" as const,card_id:existing.card_id,at_turn:turn.turn_id,reason:"updated by a later completed conversation turn",patch:{summary,body,tags:[...new Set([...existing.tags,...tags])],confidence:item.confidence??"medium",evidence_status:"inferred"}}];}
-    const card:KnowledgeCard={card_id:id("card"),revision:1,type:item.type,title,summary,body,operation:null,learning_debt:item.type==="learning_debt"?{question:title,origin:turn.turn_id,learning_value:summary,task_relation:"Captured from the active conversation for later study.",recommended_stage:"after_task"}:null,provenance:[{turn_ref:turn.turn_id,speaker:"assistant",kind:"inference",excerpt:summary}],confidence:item.confidence??"medium",evidence_status:"inferred",learning_status:"new",lifecycle:"active",supersedes:[],created_at_turn:turn.turn_id,updated_at_turn:turn.turn_id,tags};
-    return [{event:"add" as const,card_id:card.card_id,at_turn:turn.turn_id,reason:"knowledge distilled by the host model from a completed turn",card}];
-  });}
   private applyEvent(sessionId:string,cursor:number,event:CardEvent):void{
     let current=this.store.getCard(event.card_id); let next:KnowledgeCard;
     if(event.event==="add"){if(!event.card)throw new Error("add requires card");next=event.card;}

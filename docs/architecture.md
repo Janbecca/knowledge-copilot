@@ -35,6 +35,8 @@ The HTTP runtime loads a single validated configuration object. Development bind
 
 `sessions.extraction_mode` is the shared source of truth for all frontends. New and migrated sessions default to `host_structured`. This avoids an unexpected provider call or fee. The panel switches the mode through a domain endpoint and never reads model credentials. In `host_structured`, active captures must include a schema-valid `knowledge_items` array; an empty array represents a completed turn with nothing worth retaining. In `server_llm`, host items are ignored and the extractor receives only the redacted persisted-turn shape.
 
+Both model paths converge on one compact `knowledge_items` schema. The server—not an external model—assigns card IDs, provenance, revisions, and canonical event shapes. This keeps provider output small, makes schema repair practical, and prevents a model from inventing persistence identities.
+
 The desktop companion is a presentation boundary, not a capture adapter. Its local origin can frame only `https://knowledge-copilot.xyz`; the remote panel runs in a sandboxed iframe and uses the existing service API. Conversation capture still requires an explicit MCP tool call or a supported host lifecycle hook.
 
 ## State and concurrency
