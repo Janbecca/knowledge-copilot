@@ -28,9 +28,12 @@
     "preview:panel": "vite --configLoader runner --config apps/knowledge-panel/vite.config.ts"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.11.1",
     "@modelcontextprotocol/ext-apps": "^1.1.2",
     "@modelcontextprotocol/sdk": "^1.25.3",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-deep-link": "^2.4.9",
+    "jose": "^6.2.10",
+    "oidc-client-ts": "^3.5.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

@@ -1,0 +1,39 @@
+.sessionbar {
+  height: auto;
+  min-height: 48px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.session-summary {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.capture-state {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #617168;
+  font-size: 9px;
+}
+
+.capture-state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8a9890;
+}
+
+.capture-state.opening i {
+  background: #d49b31;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.capture-state.ready i { background: #2d7b57; }
+.capture-state.error { color: #a33e37; }
+.capture-state.error i { background: #c84b43; }
+.settings-sheet hr { margin: 10px 0; border: 0; border-top: 1px solid #dce5df; }
+.settings-sheet button.secondary { color: #315744; background: #e2e9e5; }

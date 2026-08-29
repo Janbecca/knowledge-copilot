@@ -43,7 +43,8 @@ describe("SQLite persistence", () => {
 
     const store = new KnowledgeStore(file);
     expect(store.getSession("session_legacy")?.extraction_mode).toBe("host_structured");
-    expect(store.db.prepare("SELECT version FROM schema_migrations ORDER BY version").all()).toHaveLength(3);
+    expect(store.sessionOwner("session_legacy")).toBeNull();
+    expect(store.db.prepare("SELECT version FROM schema_migrations ORDER BY version").all()).toHaveLength(4);
     store.close();
   });
 });

@@ -1,8 +1,10 @@
 # Architecture
 
 ```text
-authorized completed turn
-  -> adapter / MCP tool
+authenticated user + paired device + explicit consent
+  -> authorized completed turn
+  -> host adapter / MCP tool / desktop local agent
+  -> ownership and replay checks
   -> KnowledgeService
   -> session.extraction_mode
      -> host_structured: validate host AI knowledge_items
@@ -28,8 +30,10 @@ full persisted turns
 - `packages/shared`: shared Session/Turn schema, IDs, hashing, redaction.
 - `mcp-server`: transport and tool/resource registration only.
 - `apps/knowledge-panel`: MCP Apps View plus standalone preview; uses tools/service HTTP, never SQLite.
-- `apps/desktop-companion`: Tauri 2 window shell; owns only window controls and embeds the production panel from the fixed HTTPS origin. It has no shell, filesystem, HTTP-client, clipboard, accessibility, or screen-capture capability.
+- `apps/desktop-companion`: Tauri 2 window shell evolving into a narrowly scoped local agent. Phase 1 adds a custom wake protocol, secure device identity, visible capture controls, and adapter messaging. It still has no global keyboard, clipboard, accessibility, or screen-capture permission.
 - `adapters/*`: host config and capability notes only; shared packages import none of them.
+
+Identity, ownership, device pairing, consent, and wake-token invariants are specified in `docs/security-and-consent.md`. Authentication is an HTTP/MCP boundary concern; the knowledge engine remains host-neutral but all externally reachable session operations receive an authenticated owner context when auth mode is enabled.
 
 The HTTP runtime loads a single validated configuration object. Development binds to loopback; production binds to all interfaces behind an HTTPS reverse proxy. `/health`, `/ready`, `/mcp`, and `/app/` have separate routing. MCP sessions remain process-local in M1 and are explicitly closed during graceful shutdown; durable knowledge writes remain transactional in SQLite.
 
@@ -37,7 +41,7 @@ The HTTP runtime loads a single validated configuration object. Development bind
 
 Both model paths converge on one compact `knowledge_items` schema. The server—not an external model—assigns card IDs, provenance, revisions, and canonical event shapes. This keeps provider output small, makes schema repair practical, and prevents a model from inventing persistence identities.
 
-The desktop companion is a presentation boundary, not a capture adapter. Its local origin can frame only `https://knowledge-copilot.xyz`; the remote panel runs in a sandboxed iframe and uses the existing service API. Conversation capture still requires an explicit MCP tool call or a supported host lifecycle hook.
+The desktop companion is both a presentation boundary and, after explicit pairing, a local routing agent. Its remote panel remains restricted to `https://knowledge-copilot.xyz`. It accepts only signed, single-use wake intents and data from approved host adapters. Conversation capture still requires an explicit host lifecycle/tool event or a per-conversation browser-extension grant; merely having the companion open never authorizes window reading.
 
 ## State and concurrency
 

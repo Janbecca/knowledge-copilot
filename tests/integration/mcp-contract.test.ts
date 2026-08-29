@@ -37,7 +37,7 @@ describe("MCP public tool contract", () => {
   it("declares output schemas and conservative risk annotations for every tool", async () => {
     const client = await harness();
     const listed = await client.listTools();
-    expect(listed.tools).toHaveLength(15);
+    expect(listed.tools).toHaveLength(16);
     for (const tool of listed.tools) {
       expect(tool.outputSchema).toMatchObject({ type: "object" });
       expect(tool.annotations?.openWorldHint).toBe(false);

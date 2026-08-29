@@ -1,11 +1,14 @@
 import { resolve } from "node:path";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
+export type AuthMode = "disabled" | "oidc";
 export interface RuntimeConfig {
   environment: "development" | "test" | "production";
   host: string; port: number; publicBaseUrl?: string; database: string; logLevel: LogLevel;
   bodyLimitBytes: number; requestTimeoutMs: number; rateLimitMax: number; rateLimitWindowMs: number;
   corsOrigins: string[]; appsChallenge?: string;
+  authMode: AuthMode; oidcIssuer?: string; oidcAudience?: string; oidcJwksUrl?: string; oidcClientId?: string;
+  desktopInstallerUrl?: string;
 }
 
 function integer(env: NodeJS.ProcessEnv, name: string, fallback: number, minimum = 1): number {
@@ -26,6 +29,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
   const logLevel = env.KNOWLEDGE_COPILOT_LOG_LEVEL ?? "info";
   if (!(logLevel === "debug" || logLevel === "info" || logLevel === "warn" || logLevel === "error")) throw new Error("KNOWLEDGE_COPILOT_LOG_LEVEL must be debug, info, warn, or error.");
   const corsOrigins = (env.KNOWLEDGE_COPILOT_CORS_ORIGINS ?? "").split(",").map(origin => origin.trim()).filter(Boolean).map(origin => url(origin, "KNOWLEDGE_COPILOT_CORS_ORIGINS")!);
+  const authMode = env.KNOWLEDGE_COPILOT_AUTH_MODE ?? "disabled";
+  if (!(authMode === "disabled" || authMode === "oidc")) throw new Error("KNOWLEDGE_COPILOT_AUTH_MODE must be disabled or oidc.");
+  const oidcIssuer = url(env.KNOWLEDGE_COPILOT_OIDC_ISSUER, "KNOWLEDGE_COPILOT_OIDC_ISSUER");
+  const oidcAudience = env.KNOWLEDGE_COPILOT_OIDC_AUDIENCE?.trim() || undefined;
+  const oidcJwksUrl = url(env.KNOWLEDGE_COPILOT_OIDC_JWKS_URL, "KNOWLEDGE_COPILOT_OIDC_JWKS_URL");
+  if (authMode === "oidc" && (!oidcIssuer || !oidcAudience)) throw new Error("OIDC auth requires KNOWLEDGE_COPILOT_OIDC_ISSUER and KNOWLEDGE_COPILOT_OIDC_AUDIENCE.");
   return {
     environment: rawEnvironment,
     host: env.KNOWLEDGE_COPILOT_HOST ?? (rawEnvironment === "production" ? "0.0.0.0" : "127.0.0.1"),
@@ -39,5 +48,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     rateLimitWindowMs: integer(env, "KNOWLEDGE_COPILOT_RATE_LIMIT_WINDOW_MS", 60_000),
     corsOrigins,
     appsChallenge: env.KNOWLEDGE_COPILOT_APPS_CHALLENGE || undefined,
+    authMode,
+    oidcIssuer,
+    oidcAudience,
+    oidcJwksUrl,
+    oidcClientId: env.KNOWLEDGE_COPILOT_OIDC_CLIENT_ID?.trim() || undefined,
+    desktopInstallerUrl: url(env.KNOWLEDGE_COPILOT_DESKTOP_INSTALLER_URL, "KNOWLEDGE_COPILOT_DESKTOP_INSTALLER_URL"),
   };
 }

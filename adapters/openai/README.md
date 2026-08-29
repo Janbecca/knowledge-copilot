@@ -1,8 +1,10 @@
 # OpenAI adapter
 
-This is a thin configuration adapter; shared code does not import it.
+This repository exposes one MCP contract to ChatGPT and Codex; host-specific adapters only decide how a completed turn reaches it.
 
-- Codex plugin discovery can use the repository `.codex-plugin/plugin.json` and `.mcp.json` after installation/reload.
-- The MCP server is verified independently over stdio/Streamable HTTP. A live Codex plugin reload was not performed in this development session.
-- ChatGPT app distribution normally requires a reachable remote MCP server and current Apps SDK configuration. Local-only SQLite and localhost are not presented as a deployed ChatGPT app.
-- Do not assume the host calls `capture_conversation_turn` automatically. The user/agent must call it after a completed turn unless a separately authorized lifecycle integration exists.
+- ChatGPT uses the public Streamable HTTP MCP endpoint. The optional narrow browser extension supplies per-conversation lifecycle detection after explicit confirmation; it never holds cloud credentials.
+- Codex plugin discovery can use `.codex-plugin/plugin.json`, `.mcp.json`, and the packaged capture skill after installation/reload. The skill asks the current Codex agent to invoke MCP tools after substantive replies.
+- Codex does not have a portable browser-extension-style post-turn hook in this implementation. Continuous saving therefore depends on the installed skill/tool contract, not screen scraping.
+- In `host_structured`, the current OpenAI host must submit `knowledge_items`. In `server_llm`, an authorized adapter may submit the completed raw turn to the configured server extractor.
+
+The desktop companion is the shared movable window and wake target. An inline MCP App view is only a progressive enhancement and is not described as a browser sidebar.

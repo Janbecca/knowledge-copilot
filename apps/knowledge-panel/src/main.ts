@@ -1,5 +1,7 @@
 import { App } from "@modelcontextprotocol/ext-apps";
+import { UserManager, WebStorageStateStore } from "oidc-client-ts";
 import "./style.css";
+import "./security.css";
 
 type ExtractionMode = "host_structured" | "server_llm";
 type Card = any;
@@ -15,7 +17,9 @@ type State = {
   cards: Card[];
   learning_debts: Card[];
   recent_cards?: Card[];
+  desktop?: DesktopWake;
 };
+type DesktopWake = { status: "ready" | "not_paired"; deep_link?: string; expires_at?: string; install_url: string };
 
 const root = document.querySelector<HTMLDivElement>("#app")!;
 const query = new URLSearchParams(location.search);
@@ -26,6 +30,11 @@ let filter = "all";
 let embedded = false;
 let mcp: App | null = null;
 let errorMessage = "";
+let authEnabled = false;
+let accessToken = "";
+let userManager: UserManager | null = null;
+let devices: Array<{ device_id: string; name: string; platform: string; last_seen_at: string; revoked_at: string | null }> = [];
+let oneTimeDeviceToken = "";
 
 const host = () => (window as any).openai as {
   requestDisplayMode?: (input: { mode: "inline" | "pip" | "fullscreen" }) => Promise<unknown>;
@@ -49,6 +58,24 @@ async function openStandalone() {
     return;
   }
   window.open(href, "_blank", "noopener,noreferrer");
+}
+
+async function openDesktopIntent(intent: DesktopWake) {
+  if (intent.status !== "ready" || !intent.deep_link) {
+    const api = host();
+    if (api?.openExternal) await api.openExternal({ href: intent.install_url, redirectUrl: false });
+    else window.open(intent.install_url, "_blank", "noopener,noreferrer");
+    return;
+  }
+  try {
+    const api = host();
+    if (api?.openExternal) await api.openExternal({ href: intent.deep_link, redirectUrl: false });
+    else location.href = intent.deep_link;
+  } catch {
+    const api = host();
+    if (api?.openExternal) await api.openExternal({ href: intent.install_url, redirectUrl: false });
+    else window.open(intent.install_url, "_blank", "noopener,noreferrer");
+  }
 }
 
 function esc(value: string) {
@@ -115,6 +142,10 @@ function debugCaptureView(mode: ExtractionMode) {
 }
 
 function render() {
+  if (!embedded && authEnabled && !accessToken) {
+    root.innerHTML = `<main class="welcome"><h1>登录知识驾驶舱</h1><p>登录后才能访问属于你的学习会话、配对设备和授权记录。</p>${errorView()}<button id="login">使用账号登录</button><p class="mode-help">登录通过标准 OAuth/OIDC PKCE 完成；桌面设备令牌不会保存在网页存储中。</p></main>`;
+    bind(); return;
+  }
   if (!state) {
     const initialMode = (localStorage.getItem("kc-new-mode") as ExtractionMode | null) ?? "host_structured";
     root.innerHTML = `<main class="welcome">
@@ -128,6 +159,8 @@ function render() {
         <button>创建会话</button>
       </form>
       <form id="open"><input id="sid" placeholder="session_id"><button>打开</button></form>
+      ${deviceManagerView()}
+      ${!embedded && authEnabled ? '<button id="logout">退出账号</button>' : ""}
     </main>`;
     bind();
     return;
@@ -145,7 +178,7 @@ function render() {
         <p class="session-id">${esc(state.session.session_id)}</p>
         <p>${state.session.status} · ${esc(state.session.capture_scope.topic ?? "全部主题")}</p>
       </div>
-      <div class="panel-actions"><button id="pip">悬浮</button><button id="fullscreen">全屏</button><button id="external">新窗口</button><button id="toggle">${state.session.status === "active" ? "暂停" : "恢复"}</button><button id="refresh">刷新</button></div>
+      <div class="panel-actions"><button id="desktop">桌面驾驶舱</button><button id="pip">悬浮</button><button id="fullscreen">全屏</button><button id="external">新窗口</button><button id="toggle">${state.session.status === "active" ? "暂停" : "恢复"}</button><button id="refresh">刷新</button>${!embedded && authEnabled ? '<button id="logout">退出</button>' : ""}</div>
     </header>
     <section class="mode-section">
       <div><p class="eyebrow dark">EXTRACTION MODE</p><h2>知识提取方式</h2></div>
@@ -160,6 +193,7 @@ function render() {
     <section><h2>待深挖</h2>${state.learning_debts.map(cardView).join("") || "<p class=empty>暂无学习债务。</p>"}</section>
     <section><h2>笔记与思维导图</h2><div class="exports"><button data-export="markdown">Markdown 笔记</button><button data-export="mermaid">Mermaid 思维导图</button><button data-export="json">JSON 完整导出</button></div><pre id="export"></pre></section>
     ${debugCaptureView(mode)}
+    ${deviceManagerView()}
   </main>`;
   bind();
 }
@@ -182,13 +216,16 @@ async function call(name: string, args: any) {
     change_extraction_mode: [`/api/sessions/${args.session_id}/extraction-mode`, "POST"],
     change_card_learning_status: [`/api/cards/${args.card_id}/status`, "POST"],
     export_learning_package: [`/api/sessions/${args.session_id}/export/${args.format}`, "GET"],
+    wake_desktop_copilot: [`/api/sessions/${args.session_id}/wake`, "POST"],
   };
   const [url, method] = routes[name];
   const payload = { ...args };
   delete payload.session_id;
   delete payload.card_id;
   delete payload.format;
-  const response = await fetch(url, { method, headers: { "content-type": "application/json" }, body: method === "GET" ? undefined : JSON.stringify(payload) });
+  const headers: Record<string,string> = { "content-type": "application/json" };
+  if (accessToken) headers.authorization = `Bearer ${accessToken}`;
+  const response = await fetch(url, { method, headers, body: method === "GET" ? undefined : JSON.stringify(payload) });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error ?? "操作失败");
   return result;
@@ -218,6 +255,19 @@ async function act(operation: () => Promise<void>) {
 }
 
 function bind() {
+  document.querySelector("#login")?.addEventListener("click", () => void act(async () => { await userManager?.signinRedirect(); }));
+  document.querySelector("#logout")?.addEventListener("click", () => void act(async () => { accessToken = ""; await userManager?.signoutRedirect(); }));
+  document.querySelector("#dismiss-token")?.addEventListener("click", () => { oneTimeDeviceToken = ""; render(); });
+  document.querySelector<HTMLFormElement>("#pair-device")?.addEventListener("submit", event => {
+    event.preventDefault(); void act(async () => {
+      const response = await authenticatedFetch("/api/devices/pair", { method: "POST", body: JSON.stringify({ name: document.querySelector<HTMLInputElement>("#device-name")!.value.trim(), platform: "windows" }) });
+      const result = await response.json() as { device_token: string };
+      oneTimeDeviceToken = result.device_token; await loadDevices(); render();
+    });
+  });
+  document.querySelectorAll<HTMLElement>("[data-revoke-device]").forEach(button => {
+    button.onclick = () => void act(async () => { await authenticatedFetch(`/api/devices/${button.dataset.revokeDevice}`, { method: "DELETE" }); await loadDevices(); render(); });
+  });
   document.querySelector<HTMLFormElement>("#start")?.addEventListener("submit", event => {
     event.preventDefault();
     void act(async () => {
@@ -261,6 +311,7 @@ function bind() {
   document.querySelector("#pip")?.addEventListener("click", () => void act(() => requestMode("pip")));
   document.querySelector("#fullscreen")?.addEventListener("click", () => void act(() => requestMode("fullscreen")));
   document.querySelector("#external")?.addEventListener("click", () => void act(openStandalone));
+  document.querySelector("#desktop")?.addEventListener("click", () => void act(async () => openDesktopIntent(await call("wake_desktop_copilot", { session_id: sessionId, source_host: embedded ? "chatgpt" : "web" }))));
   document.querySelector("#refresh")?.addEventListener("click", () => void act(load));
   document.querySelector("#toggle")?.addEventListener("click", () => void act(async () => {
     await call("change_capture_status", { session_id: sessionId, status: state!.session.status === "active" ? "paused" : "active" });
@@ -304,6 +355,52 @@ function bind() {
   });
 }
 
+function deviceManagerView() {
+  if (embedded || !authEnabled) return "";
+  return `<section class="security-card"><p class="eyebrow dark">ACCOUNT SECURITY</p><h2>桌面设备</h2><p class="mode-help">设备令牌只显示一次。复制后粘贴到桌面浮窗“会话 → 桌面设备配对”，它会进入 Windows 凭据管理器。</p>
+    ${oneTimeDeviceToken ? `<div class="one-time-token"><b>请立即复制，关闭后不再显示</b><code>${esc(oneTimeDeviceToken)}</code><button id="dismiss-token">我已保存</button></div>` : ""}
+    <form id="pair-device" class="device-form"><input id="device-name" placeholder="例如：我的 Windows 电脑" required maxlength="80"><button>创建设备</button></form>
+    <div class="device-list">${devices.map(device => `<div><span><b>${esc(device.name)}</b><small>${esc(device.platform)} · ${device.revoked_at ? "已撤销" : "有效"}</small></span>${device.revoked_at ? "" : `<button data-revoke-device="${attr(device.device_id)}">撤销</button>`}</div>`).join("") || "<p class=empty>尚未配对桌面设备。</p>"}</div>
+  </section>`;
+}
+
+async function authenticatedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers); headers.set("content-type", "application/json");
+  if (accessToken) headers.set("authorization", `Bearer ${accessToken}`);
+  const response = await fetch(url, { ...init, headers });
+  if (!response.ok) { const result = await response.json().catch(() => ({})) as { error?: string }; throw new Error(result.error ?? `请求失败（${response.status}）`); }
+  return response;
+}
+
+async function loadDevices(): Promise<void> {
+  if (!accessToken) return;
+  const response = await authenticatedFetch("/api/devices");
+  devices = ((await response.json()) as { devices: typeof devices }).devices;
+}
+
+async function initializeStandaloneAuth(): Promise<void> {
+  const response = await fetch("/api/auth/config", { headers: { accept: "application/json" } });
+  const config = await response.json() as { enabled: boolean; authority?: string; client_id?: string; audience?: string; scope?: string };
+  authEnabled = config.enabled;
+  if (!config.enabled || !config.authority || !config.client_id) return;
+  userManager = new UserManager({
+    authority: config.authority,
+    client_id: config.client_id,
+    redirect_uri: `${location.origin}/app/`,
+    post_logout_redirect_uri: `${location.origin}/app/`,
+    response_type: "code",
+    scope: config.scope,
+    extraQueryParams: config.audience ? { audience: config.audience } : undefined,
+    userStore: new WebStorageStateStore({ store: sessionStorage }),
+  });
+  if (query.has("code") && query.has("state")) {
+    await userManager.signinRedirectCallback();
+    history.replaceState({}, document.title, "/app/");
+  }
+  const user = await userManager.getUser();
+  if (user && !user.expired) { accessToken = user.access_token; await loadDevices(); }
+}
+
 embedded = window.parent !== window && query.get("desktop") !== "1";
 if (embedded) {
   try {
@@ -318,6 +415,7 @@ if (embedded) {
       localStorage.setItem("kc-session", sessionId);
       host()?.setOpenInAppUrl?.({ href: standaloneUrl() });
       render();
+      if (parsed.desktop) void openDesktopIntent(parsed.desktop);
     };
     await mcp.connect();
     await requestMode("pip").catch(() => undefined);
@@ -326,6 +424,7 @@ if (embedded) {
     mcp = null;
   }
 }
+if (!embedded) await initializeStandaloneAuth();
 await act(load);
 window.setInterval(() => {
   if (embedded && sessionId && document.visibilityState !== "hidden") void act(load);

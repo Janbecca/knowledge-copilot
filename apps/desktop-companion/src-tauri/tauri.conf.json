@@ -26,8 +26,13 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; frame-src https://knowledge-copilot.xyz; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'",
+      "csp": "default-src 'self'; connect-src https://knowledge-copilot.xyz; frame-src https://knowledge-copilot.xyz; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'",
       "capabilities": ["desktop-window"]
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": { "schemes": ["knowledge-copilot"] }
     }
   },
   "bundle": {
