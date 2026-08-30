@@ -34,7 +34,8 @@ describe("OIDC HTTP ownership and device flow", () => {
   const headers = (bearer: string) => ({ authorization: `Bearer ${bearer}`, "content-type": "application/json" });
 
   it("advertises OAuth, enforces scopes and ownership, and completes device wake", async () => {
-    const metadata = await (await fetch(`${base}/.well-known/oauth-protected-resource`)).json() as { authorization_servers: string[] };
+    const metadata = await (await fetch(`${base}/.well-known/oauth-protected-resource`)).json() as { resource: string; authorization_servers: string[] };
+    expect(metadata.resource).toBe("https://knowledge-copilot.xyz");
     expect(metadata.authorization_servers).toEqual([issuer]);
     const anonymous = await fetch(`${base}/api/sessions`, { method: "POST", body: "{}" });
     expect(anonymous.status).toBe(401);

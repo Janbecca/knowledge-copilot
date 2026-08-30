@@ -69,7 +69,7 @@ export async function startHttp(service: KnowledgeService, config: RuntimeConfig
       }
       if (url.pathname === "/.well-known/oauth-protected-resource" || url.pathname === "/.well-known/oauth-protected-resource/mcp") {
         if (config.authMode !== "oidc" || !config.oidcIssuer) throw new HttpError(404, "OAuth is not configured");
-        json(req, res, config, 200, { resource: `${config.publicBaseUrl ?? `http://${config.host}:${config.port}`}/mcp`, authorization_servers: [config.oidcIssuer], scopes_supported: ["knowledge:read", "knowledge:write", "device:manage", "capture:write"], bearer_methods_supported: ["header"] }); return;
+        json(req, res, config, 200, { resource: config.oidcAudience ?? `${config.publicBaseUrl ?? `http://${config.host}:${config.port}`}/mcp`, authorization_servers: [config.oidcIssuer], scopes_supported: ["knowledge:read", "knowledge:write", "device:manage", "capture:write"], bearer_methods_supported: ["header"] }); return;
       }
       if (url.pathname === "/api/auth/config" && req.method === "GET") {
         json(req, res, config, 200, config.authMode === "oidc" && config.oidcIssuer && config.oidcClientId
