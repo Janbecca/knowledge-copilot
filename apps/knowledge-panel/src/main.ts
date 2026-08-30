@@ -244,8 +244,8 @@ async function load() {
   render();
 }
 
-async function act(operation: () => Promise<void>) {
-  errorMessage = "";
+async function act(operation: () => Promise<void>, preserveError = false) {
+  if (!preserveError) errorMessage = "";
   try {
     await operation();
   } catch (error) {
@@ -255,7 +255,10 @@ async function act(operation: () => Promise<void>) {
 }
 
 function bind() {
-  document.querySelector("#login")?.addEventListener("click", () => void act(async () => { await userManager?.signinRedirect(); }));
+  document.querySelector("#login")?.addEventListener("click", () => void act(async () => {
+    if (!userManager) throw new Error("登录服务尚未初始化，请刷新页面后重试");
+    await userManager.signinRedirect();
+  }));
   document.querySelector("#logout")?.addEventListener("click", () => void act(async () => { accessToken = ""; await userManager?.signoutRedirect(); }));
   document.querySelector("#dismiss-token")?.addEventListener("click", () => { oneTimeDeviceToken = ""; render(); });
   document.querySelector<HTMLFormElement>("#pair-device")?.addEventListener("submit", event => {
@@ -379,6 +382,12 @@ async function loadDevices(): Promise<void> {
 }
 
 async function initializeStandaloneAuth(): Promise<void> {
+  const oauthError = query.get("error");
+  if (oauthError) {
+    const description = query.get("error_description") ?? oauthError;
+    history.replaceState({}, document.title, "/app/");
+    throw new Error(`账号登录失败：${description}`);
+  }
   const response = await fetch("/api/auth/config", { headers: { accept: "application/json" } });
   const config = await response.json() as { enabled: boolean; authority?: string; client_id?: string; audience?: string; scope?: string };
   authEnabled = config.enabled;
@@ -424,8 +433,11 @@ if (embedded) {
     mcp = null;
   }
 }
-if (!embedded) await initializeStandaloneAuth();
-await act(load);
+if (!embedded) {
+  try { await initializeStandaloneAuth(); }
+  catch (error) { errorMessage = error instanceof Error ? error.message : "账号登录初始化失败"; }
+}
+await act(load, Boolean(errorMessage));
 window.setInterval(() => {
   if (embedded && sessionId && document.visibilityState !== "hidden") void act(load);
 }, 8000);
