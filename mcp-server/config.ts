@@ -31,7 +31,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
   const corsOrigins = (env.KNOWLEDGE_COPILOT_CORS_ORIGINS ?? "").split(",").map(origin => origin.trim()).filter(Boolean).map(origin => url(origin, "KNOWLEDGE_COPILOT_CORS_ORIGINS")!);
   const authMode = env.KNOWLEDGE_COPILOT_AUTH_MODE ?? "disabled";
   if (!(authMode === "disabled" || authMode === "oidc")) throw new Error("KNOWLEDGE_COPILOT_AUTH_MODE must be disabled or oidc.");
-  const oidcIssuer = url(env.KNOWLEDGE_COPILOT_OIDC_ISSUER, "KNOWLEDGE_COPILOT_OIDC_ISSUER");
+  const oidcIssuerBase = url(env.KNOWLEDGE_COPILOT_OIDC_ISSUER, "KNOWLEDGE_COPILOT_OIDC_ISSUER");
+  const oidcIssuer = oidcIssuerBase ? `${oidcIssuerBase}/` : undefined;
   const oidcAudience = env.KNOWLEDGE_COPILOT_OIDC_AUDIENCE?.trim() || undefined;
   const oidcJwksUrl = url(env.KNOWLEDGE_COPILOT_OIDC_JWKS_URL, "KNOWLEDGE_COPILOT_OIDC_JWKS_URL");
   if (authMode === "oidc" && (!oidcIssuer || !oidcAudience)) throw new Error("OIDC auth requires KNOWLEDGE_COPILOT_OIDC_ISSUER and KNOWLEDGE_COPILOT_OIDC_AUDIENCE.");

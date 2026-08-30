@@ -13,7 +13,7 @@ export class RequestAuthenticator {
   private readonly jwks?: ReturnType<typeof createRemoteJWKSet>;
   constructor(readonly config: RuntimeConfig, readonly identity: IdentityService) {
     if (config.authMode === "oidc") {
-      const jwksUrl = config.oidcJwksUrl ?? `${config.oidcIssuer}/.well-known/jwks.json`;
+      const jwksUrl = config.oidcJwksUrl ?? new URL(".well-known/jwks.json", config.oidcIssuer).href;
       this.jwks = createRemoteJWKSet(new URL(jwksUrl));
     }
   }

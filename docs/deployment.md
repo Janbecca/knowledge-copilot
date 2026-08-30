@@ -26,6 +26,10 @@ KNOWLEDGE_COPILOT_DESKTOP_INSTALLER_URL=https://knowledge-copilot.xyz/downloads/
 
 Register the exact panel redirect URI and logout URI with the identity provider. Keep capture disabled for public users until these values are live and a two-account ownership-isolation test has passed. `AUTH_MODE=disabled` is only the single-user migration/local-development posture.
 
+For Auth0, create a custom API whose Identifier is exactly `https://knowledge-copilot.xyz` and define `knowledge:read`, `knowledge:write`, `device:manage`, and `capture:write` permissions. Create a Single Page Application with exact values: callback/logout `https://knowledge-copilot.xyz/app/`, web origin and CORS origin `https://knowledge-copilot.xyz`. The panel sends the API Identifier as the OAuth `audience`; omitting it produces a token intended for Auth0 `/userinfo`, which the knowledge API must reject.
+
+For ChatGPT/Codex MCP OAuth, enable Auth0's **Resource Parameter Compatibility Profile** and **Client ID Metadata Document Registration** tenant settings. Import the exact CIMD URL shown by the OpenAI plugin management page (the stable eligible-client value is `https://chatgpt.com/oauth/client.json`) rather than creating or sharing a client secret. This lets the OpenAI host use Authorization Code + PKCE and lets Auth0 map the MCP `resource` parameter to the API audience. Keep the Auth0 issuer's canonical trailing slash in token validation; the runtime normalizes the configured issuer accordingly.
+
 To enable the per-session `server_llm` option, inject these server-only variables before starting Compose:
 
 ```text
