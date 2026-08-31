@@ -5,7 +5,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || message.channel !== "knowledge-copilot") return false;
   chrome.runtime.sendNativeMessage(NATIVE_HOST, message.payload, response => {
     if (chrome.runtime.lastError) {
-      if (message.payload?.type === "wake") chrome.tabs.create({ url: INSTALL_URL });
       sendResponse({ ok: false, error: chrome.runtime.lastError.message, install_url: INSTALL_URL });
       return;
     }

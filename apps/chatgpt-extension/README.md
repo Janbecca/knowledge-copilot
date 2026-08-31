@@ -5,7 +5,7 @@ Manifest V3 的最小权限适配器。它只注入 `https://chatgpt.com/*`，�
 ## 当前行为
 
 - 在 `/c/<conversation-id>` 对话中检测 Knowledge Copilot 调用词。
-- 首次检测只唤醒/提示，不读取并提交内容。
+- 首次检测只显示授权提示，不读取、不提交，也不会自动打开桌面应用或安装页。
 - 用户必须在页面上的固定状态条确认“授权当前对话”。授权按 ChatGPT conversation ID 分开保存。
 - 授权后只读取带 `data-message-author-role=user|assistant` 的文字节点；不读取输入框、密码字段、其他标签页、截图、剪贴板或键盘。
 - 助手文本稳定后提交最后一个完整轮次，使用内容哈希幂等去重；失败不会标记为已发送。
@@ -30,4 +30,4 @@ Manifest V3 的最小权限适配器。它只注入 `https://chatgpt.com/*`，�
 
 正式桌面安装器必须用商店固定 ID 自动完成同一注册。Native host 指向同一个桌面 EXE；Chrome 以 Native Messaging 参数启动时，程序进入无窗口 stdio 桥接模式。
 
-Host 未安装时，唤醒会打开 `https://knowledge-copilot.xyz/install/`，捕获会保持未发送状态。原生桥只支持 `wake`、`grant_consent`、`revoke_consent` 和 `capture_turn` 四种有限消息，单条消息上限 1 MB；云端再次校验设备、会话归属和逐会话授权。
+Host 未安装或暂时不可用时，扩展只在状态条显示错误和安装地址，不会未经用户操作自动打开新标签页；捕获会保持未发送状态。原生桥只支持 `wake`、`grant_consent`、`revoke_consent` 和 `capture_turn` 四种有限消息，单条消息上限 1 MB；云端再次校验设备、会话归属和逐会话授权。

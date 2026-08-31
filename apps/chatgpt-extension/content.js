@@ -6,7 +6,6 @@ let badge = null;
 let lastCandidate = "";
 let stableScans = 0;
 let scanTimer = 0;
-let wakeAttemptedFor = "";
 
 function currentConversation() {
   const match = location.pathname.match(/^\/c\/([^/?#]+)/);
@@ -77,7 +76,6 @@ async function scan() {
     const invocationText = (latestUser?.innerText || "").trim();
     if (INVOCATION.test(invocationText)) {
       renderBadge("检测到调用词。确认后才会读取当前对话。");
-      if (wakeAttemptedFor !== conversationRef) { wakeAttemptedFor = conversationRef ?? ""; await send({ version: 1, type: "wake", source_host: "chatgpt", conversation_ref: conversationRef }); }
     }
     return;
   }

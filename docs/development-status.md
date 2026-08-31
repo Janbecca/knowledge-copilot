@@ -1,6 +1,6 @@
 # Development status
 
-Last updated: 2026-08-29
+Last updated: 2026-08-31
 
 ## Current objective
 
@@ -93,6 +93,7 @@ The selected mode is persisted on the session, so ChatGPT MCP Apps, the standalo
 - Production OIDC rollout on 2026-08-30: code `11ed65c` deployed with Auth0 issuer, API audience, public SPA client ID, and JWKS configuration after backing up the prior environment. Pre-link verification found and fixed a protected-resource mismatch so the advertised OAuth `resource`, Auth0 API Identifier, and verified token audience are all exactly `https://knowledge-copilot.xyz`, while the MCP transport remains `/mcp`.
 - Production OIDC acceptance on 2026-08-30: code `218402a` is live; `/health` and `/ready` pass with extractor `llm`, `/api/auth/config` reports the expected issuer/audience/public SPA client, and protected-resource metadata advertises the exact audience plus canonical issuer. Auth0 discovery confirms issuer-response identification and PKCE `S256`. Panel login remains the next user acceptance step; ChatGPT client registration remains intentionally unresolved rather than depending on trial-only `private_key_jwt`.
 - Panel login diagnosis on 2026-08-30: Auth0 accepted the public client and exact callback but returned `invalid_request` because `Knowledge Copilot Panel` had no client grant for the custom API. The frontend now surfaces OAuth callback errors and reports an uninitialized login manager instead of silently rendering the same login screen. Auth0 still needs a user-delegated four-scope grant for the SPA; no Client Access/M2M grant is required.
+- Authenticated panel acceptance on 2026-08-31: the production Auth0 signup/login flow completed successfully after the SPA received its user-delegated API grant. A follow-up Chrome adapter defect was found where a historical invocation phrase triggered `wake` during page scanning and any unavailable Native Messaging host opened the installer automatically. The extension now requires the explicit per-conversation grant action before wake and never opens the installer merely because native messaging failed.
 
 ## Live DeepSeek follow-up
 
