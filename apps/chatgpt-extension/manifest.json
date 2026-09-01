@@ -3,7 +3,7 @@
   "name": "Knowledge Copilot Capture",
   "version": "0.1.1",
   "description": "Explicit per-conversation ChatGPT capture bridge for the Knowledge Copilot desktop app.",
-  "permissions": ["storage", "nativeMessaging"],
+  "permissions": ["storage", "nativeMessaging", "alarms"],
   "host_permissions": ["https://chatgpt.com/*"],
   "background": { "service_worker": "background.js", "type": "module" },
   "content_scripts": [

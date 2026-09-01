@@ -1,0 +1,25 @@
+.cockpit-content { min-height: 0; flex: 1; overflow: auto; padding: 14px; background: #f4f7f3; }
+.cockpit-state { min-height: 190px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; padding: 22px; color: #6a7a71; text-align: center; }
+.cockpit-state b { color: #294b3a; font-size: 13px; }
+.cockpit-state span { max-width: 270px; font-size: 11px; line-height: 1.55; }
+.cockpit-state button { border: 0; border-radius: 9px; padding: 7px 12px; color: #fff; background: #256b49; font-size: 10px; }
+.cockpit-state.loading-state i { width: 10px; height: 10px; border-radius: 50%; background: #2d7b57; animation: pulse 1s ease-in-out infinite; }
+.cockpit-state.error-state b { color: #a33e37; }
+.cockpit-state.compact-state { min-height: 160px; border: 1px dashed #cbd8d0; border-radius: 13px; background: #fff; }
+.cockpit-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.cockpit-head p { margin: 0 0 4px; color: #56806a; font-size: 8px; font-weight: 700; letter-spacing: .06em; }
+.cockpit-head h1 { margin: 0; color: #183c2b; font-size: 18px; line-height: 1.3; }
+.session-status { flex: 0 0 auto; border-radius: 999px; padding: 5px 8px; color: #236044; background: #dff0e5; font-size: 9px; }
+.session-status.paused { color: #805816; background: #f5e9ce; }
+.session-status.ended { color: #66736c; background: #e7ece9; }
+.sync-warning { margin: 0 0 10px; padding: 7px 9px; border-radius: 8px; color: #8b5d17; background: #fff4dc; font-size: 9px; }
+.cockpit-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 11px; }
+.cockpit-metrics span { padding: 9px 10px; border: 1px solid #dde7e0; border-radius: 10px; color: #68786f; background: #fff; font-size: 9px; }
+.cockpit-metrics b { display: block; margin-bottom: 2px; color: #23583e; font-size: 15px; }
+.card-list { display: flex; flex-direction: column; gap: 9px; }
+.knowledge-card { padding: 12px; border: 1px solid #dce6df; border-radius: 12px; background: #fff; box-shadow: 0 3px 12px rgba(20, 50, 36, .04); }
+.knowledge-card > div { display: flex; align-items: center; justify-content: space-between; }
+.knowledge-card > div span { border-radius: 6px; padding: 3px 6px; color: #2d6b4b; background: #e8f2ec; font-size: 8px; }
+.knowledge-card small { color: #86928b; font-size: 8px; }
+.knowledge-card h2 { margin: 8px 0 5px; color: #1d3e2e; font-size: 12px; line-height: 1.45; }
+.knowledge-card p { margin: 0; color: #66766d; font-size: 10px; line-height: 1.6; }

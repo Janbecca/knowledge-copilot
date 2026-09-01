@@ -20,6 +20,13 @@ keyring = { version = "3", features = ["windows-native"] }
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 open = "5"
 tauri-plugin-deep-link = "2"
+base64 = "0.22"
+getrandom = "0.4"
+sha2 = "0.10"
+url = "2"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }

@@ -72,8 +72,9 @@ export async function startHttp(service: KnowledgeService, config: RuntimeConfig
         json(req, res, config, 200, { resource: config.oidcAudience ?? `${config.publicBaseUrl ?? `http://${config.host}:${config.port}`}/mcp`, authorization_servers: [config.oidcIssuer], scopes_supported: ["knowledge:read", "knowledge:write", "device:manage", "capture:write"], bearer_methods_supported: ["header"] }); return;
       }
       if (url.pathname === "/api/auth/config" && req.method === "GET") {
-        json(req, res, config, 200, config.authMode === "oidc" && config.oidcIssuer && config.oidcClientId
-          ? { enabled: true, authority: config.oidcIssuer, client_id: config.oidcClientId, audience: config.oidcAudience, scope: "openid profile email knowledge:read knowledge:write device:manage capture:write" }
+        const clientId = url.searchParams.get("client") === "desktop" ? config.oidcDesktopClientId : config.oidcClientId;
+        json(req, res, config, 200, config.authMode === "oidc" && config.oidcIssuer && clientId
+          ? { enabled: true, authority: config.oidcIssuer, client_id: clientId, audience: config.oidcAudience, scope: "openid profile email knowledge:read knowledge:write device:manage capture:write" }
           : { enabled: false }); return;
       }
 
@@ -117,6 +118,43 @@ export async function startHttp(service: KnowledgeService, config: RuntimeConfig
           requireScope(access, "capture:write"); if (access.authType !== "device" || !access.userId || !access.deviceId) throw new AuthenticationError(403, "paired device authentication required");
           const input = await body(req, config.bodyLimitBytes) as { source_host: string; conversation_ref: string };
           json(req, res, config, 200, { revoked: identity.revokeDeviceConversationConsent({ userId: access.userId, deviceId: access.deviceId, sourceHost: input.source_host, conversationRef: input.conversation_ref }) > 0 }); return;
+        }
+        if (url.pathname === "/api/conversation-bindings/resolve" && req.method === "POST") {
+          requireScope(access, "capture:write"); if (access.authType !== "device" || !access.userId || !access.deviceId) throw new AuthenticationError(403, "paired device authentication required");
+          const input = await body(req, config.bodyLimitBytes) as { source_host: string; conversation_ref: string; create?: boolean; title?: string };
+          if (!input.source_host?.trim() || !input.conversation_ref?.trim()) throw new HttpError(400, "source_host and conversation_ref are required");
+          let binding = identity.getConversationBinding(access.userId, input.source_host, input.conversation_ref);
+          if (!binding && input.create) {
+            if (!identity.hasActiveConsent({ userId: access.userId, deviceId: access.deviceId, sourceHost: input.source_host, conversationRef: input.conversation_ref, scope: "conversation-text" })) throw new AuthenticationError(403, "active per-conversation capture consent required");
+            const shortRef = input.conversation_ref.split(":").at(-1)?.slice(0, 12) || "新对话";
+            const session = service.start({ title: input.title?.trim() || `ChatGPT · ${shortRef}`, source_host: input.source_host, extraction_mode: "server_llm" }, access.userId);
+            binding = identity.createConversationBinding(access.userId, { sourceHost: input.source_host, conversationRef: input.conversation_ref, sessionId: session.session_id });
+          } else if (binding && input.create && binding.capture_status !== "active") {
+            if (!identity.hasActiveConsent({ userId: access.userId, deviceId: access.deviceId, sourceHost: input.source_host, conversationRef: input.conversation_ref, scope: "conversation-text" })) throw new AuthenticationError(403, "active per-conversation capture consent required");
+            binding = identity.changeConversationCaptureStatus(access.userId, input.source_host, input.conversation_ref, "active");
+          }
+          json(req, res, config, 200, { binding, session: binding ? service.get(binding.session_id, access.userId).session : null }); return;
+        }
+        if (url.pathname === "/api/conversation-bindings/status" && req.method === "POST") {
+          requireScope(access, "capture:write"); if (access.authType !== "device" || !access.userId || !access.deviceId) throw new AuthenticationError(403, "paired device authentication required");
+          const input = await body(req, config.bodyLimitBytes) as { source_host: string; conversation_ref: string; status: "off" | "active" | "paused" | "ended" };
+          if (input.status === "active" && !identity.hasActiveConsent({ userId: access.userId, deviceId: access.deviceId, sourceHost: input.source_host, conversationRef: input.conversation_ref, scope: "conversation-text" })) throw new AuthenticationError(403, "active per-conversation capture consent required");
+          json(req, res, config, 200, { binding: identity.changeConversationCaptureStatus(access.userId, input.source_host, input.conversation_ref, input.status) }); return;
+        }
+        if (url.pathname === "/api/conversation-bindings/presence" && req.method === "POST") {
+          requireScope(access, "capture:write"); if (access.authType !== "device" || !access.userId) throw new AuthenticationError(403, "paired device authentication required");
+          const input = await body(req, config.bodyLimitBytes) as { source_host: string; conversation_ref: string; status: "foreground" | "background" | "closed" };
+          json(req, res, config, 200, { binding: identity.updateConversationPresence(access.userId, input.source_host, input.conversation_ref, input.status) }); return;
+        }
+        if (url.pathname === "/api/conversation-bindings/capture" && req.method === "POST") {
+          requireScope(access, "capture:write"); if (access.authType !== "device" || !access.userId || !access.deviceId) throw new AuthenticationError(403, "paired device authentication required");
+          const input = await body(req, config.bodyLimitBytes) as Record<string, unknown>;
+          const sourceHost = typeof input.source_host === "string" ? input.source_host : "";
+          const conversationRef = typeof input.conversation_ref === "string" ? input.conversation_ref : "";
+          const binding = identity.getConversationBinding(access.userId, sourceHost, conversationRef);
+          if (!binding || binding.capture_status !== "active") throw new AuthenticationError(403, "active conversation binding required");
+          if (!identity.hasActiveConsent({ userId: access.userId, deviceId: access.deviceId, sourceHost, conversationRef, scope: "conversation-text" })) throw new AuthenticationError(403, "active per-conversation capture consent required");
+          json(req, res, config, 200, await service.capture({ ...input, session_id: binding.session_id } as never, access.userId)); return;
         }
         const sessionWake = url.pathname.match(/^\/api\/sessions\/([^/]+)\/wake$/); if (sessionWake && req.method === "POST") {
           requireScope(access, "knowledge:read"); requireScope(access, "device:manage"); const userId = requireUser(access); service.get(sessionWake[1]!, userId);

@@ -42,6 +42,25 @@ Open `http://127.0.0.1:3210/app/` to verify the built panel against the same ser
 | Dual extraction routing and retry atomicity | `extraction-mode.test.ts` |
 | LLM request contract, bounded repair, and sanitized HTTP errors | `llm-extractor.test.ts` |
 | UI mode switch and HTTP endpoint | `ui-contract.test.ts`, `http-runtime.test.ts` |
+| Three ChatGPT conversations × ten alternating turns | `http-auth.test.ts` owner-scoped binding acceptance |
+| Concurrent offline tabs, durable retry and deduplication | `chatgpt-extension-background.test.ts` 30-turn queue acceptance |
+
+## ChatGPT Web P0 live acceptance
+
+Automated tests prove routing, ownership, idempotency and retry behavior, but cannot prove compatibility with ChatGPT's current production DOM or Chrome's installation UI. Run this checklist using a Web Store test release and a desktop build compiled with the same fixed extension ID:
+
+1. Install the desktop app on a Windows user profile that has no prior Knowledge Copilot credentials or registry entries.
+2. Complete system-browser login and confirm the app returns automatically without a manual “登录完成” step.
+3. Install the Chrome extension from its test listing and confirm the desktop app reports the actual version and browser after the Native Messaging heartbeat.
+4. Open ChatGPT conversations A, B and C. Confirm none of their message text is sent before separately accepting “从现在开始沉淀”.
+5. Enable A, produce ten completed user/assistant turns, and verify the desktop cursor reaches ten without duplicates.
+6. Alternate A → B → C repeatedly. Verify the desktop title/session changes to the foreground enabled conversation and collapses on an unenabled conversation.
+7. Disconnect the network, complete at least two turns in each enabled conversation, and confirm the extension reports that the turns are safely queued.
+8. Restore the network and desktop app. Verify all six turns arrive once, remain in their original sessions, and the local queue becomes empty.
+9. Pause B and verify new B turns are not captured; resume it and verify capture continues from the prior cursor. End C and verify its history remains readable while new capture stays off.
+10. Restart Chrome and Windows, reopen A, and verify the existing binding and knowledge history are restored.
+
+Record the desktop version, extension version/ID, Chrome version, ChatGPT URL shape, timestamps, three session IDs, final cursors, screenshots, and any failed step. A local or mocked pass must not be recorded as this live acceptance.
 
 Do not treat source inspection as runtime proof. Record actual command results here after every verification pass. External product-host testing remains separate from local server and browser-preview testing.
 

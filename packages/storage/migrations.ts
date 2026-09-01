@@ -78,5 +78,25 @@ export const migrations = [
       );
       CREATE INDEX IF NOT EXISTS idx_security_audit_user ON security_audit(user_id, created_at);
     `
+  },
+  {
+    version: 5,
+    sql: `
+      CREATE TABLE IF NOT EXISTS conversation_bindings(
+        binding_id TEXT PRIMARY KEY,
+        owner_user_id TEXT NOT NULL REFERENCES users(user_id),
+        source_host TEXT NOT NULL,
+        conversation_ref TEXT NOT NULL,
+        session_id TEXT NOT NULL REFERENCES sessions(session_id),
+        capture_status TEXT NOT NULL CHECK(capture_status IN ('off','active','paused','ended')),
+        presence_status TEXT NOT NULL DEFAULT 'closed' CHECK(presence_status IN ('foreground','background','closed')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_seen_at TEXT NOT NULL,
+        UNIQUE(owner_user_id, source_host, conversation_ref)
+      );
+      CREATE INDEX IF NOT EXISTS idx_conversation_bindings_session ON conversation_bindings(session_id);
+      CREATE INDEX IF NOT EXISTS idx_conversation_bindings_presence ON conversation_bindings(owner_user_id, presence_status, last_seen_at);
+    `
   }
 ];

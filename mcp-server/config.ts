@@ -7,7 +7,7 @@ export interface RuntimeConfig {
   host: string; port: number; publicBaseUrl?: string; database: string; logLevel: LogLevel;
   bodyLimitBytes: number; requestTimeoutMs: number; rateLimitMax: number; rateLimitWindowMs: number;
   corsOrigins: string[]; appsChallenge?: string;
-  authMode: AuthMode; oidcIssuer?: string; oidcAudience?: string; oidcJwksUrl?: string; oidcClientId?: string;
+  authMode: AuthMode; oidcIssuer?: string; oidcAudience?: string; oidcJwksUrl?: string; oidcClientId?: string; oidcDesktopClientId?: string;
   desktopInstallerUrl?: string;
 }
 
@@ -54,6 +54,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     oidcAudience,
     oidcJwksUrl,
     oidcClientId: env.KNOWLEDGE_COPILOT_OIDC_CLIENT_ID?.trim() || undefined,
+    oidcDesktopClientId: env.KNOWLEDGE_COPILOT_OIDC_DESKTOP_CLIENT_ID?.trim() || undefined,
     desktopInstallerUrl: url(env.KNOWLEDGE_COPILOT_DESKTOP_INSTALLER_URL, "KNOWLEDGE_COPILOT_DESKTOP_INSTALLER_URL"),
   };
 }

@@ -19,6 +19,7 @@ KNOWLEDGE_COPILOT_AUTH_MODE=oidc
 KNOWLEDGE_COPILOT_OIDC_ISSUER=https://<tenant>/
 KNOWLEDGE_COPILOT_OIDC_AUDIENCE=https://knowledge-copilot.xyz
 KNOWLEDGE_COPILOT_OIDC_CLIENT_ID=<public-spa-client-id>
+KNOWLEDGE_COPILOT_OIDC_DESKTOP_CLIENT_ID=<native-desktop-client-id>
 # Optional when discovery does not expose the expected endpoint:
 KNOWLEDGE_COPILOT_OIDC_JWKS_URL=https://<tenant>/.well-known/jwks.json
 KNOWLEDGE_COPILOT_DESKTOP_INSTALLER_URL=https://knowledge-copilot.xyz/downloads/Knowledge-Copilot-setup.exe
@@ -29,6 +30,10 @@ Register the exact panel redirect URI and logout URI with the identity provider.
 The protected-resource metadata advertises `KNOWLEDGE_COPILOT_OIDC_AUDIENCE` as its canonical `resource`. Keep that value identical to the Auth0 API Identifier; ChatGPT sends it as the OAuth `resource` parameter and the API verifies the same value in the access-token `aud` claim. The transport endpoint remains `/mcp` and does not need to be the resource identifier.
 
 For Auth0, create a custom API whose Identifier is exactly `https://knowledge-copilot.xyz` and define `knowledge:read`, `knowledge:write`, `device:manage`, and `capture:write` permissions. Create a Single Page Application with exact values: callback/logout `https://knowledge-copilot.xyz/app/`, web origin and CORS origin `https://knowledge-copilot.xyz`. The panel sends the API Identifier as the OAuth `audience`; omitting it produces a token intended for Auth0 `/userinfo`, which the knowledge API must reject.
+
+Paired desktop device tokens are server-defined credentials, not Auth0 access tokens. They receive only `capture:write` and `knowledge:read`: the extension can submit explicitly consented turns and the native desktop cockpit can read sessions owned by the paired user, but neither can edit knowledge, manage devices, or read another user's session.
+
+Create a separate Auth0 **Native Application** for the Windows companion. Add the exact callback `knowledge-copilot://auth/callback`, enable Authorization Code with PKCE, authorize the same custom API scopes, and set its client ID as `KNOWLEDGE_COPILOT_OIDC_DESKTOP_CLIENT_ID`. The desktop app exchanges the code locally, uses the short-lived access token once to create a scoped device credential, stores only that device credential in Windows Credential Manager, and never puts it in the deep link.
 
 Defining API permissions does not by itself authorize the SPA. In the custom API's **Application Access** tab, grant the `Knowledge Copilot Panel` application **User-Delegated Access** to all four scopes. Do not grant Client Access/M2M permissions. Without this client grant, Auth0 redirects back with `invalid_request` and reports that the client is not authorized to access the resource server.
 

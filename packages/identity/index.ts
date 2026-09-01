@@ -13,6 +13,9 @@ export interface AccessContext {
 export interface UserRecord { user_id: string; subject: string; display_name: string | null; email: string | null; created_at: string; updated_at: string }
 export interface DeviceRecord { device_id: string; user_id: string; name: string; platform: string; created_at: string; last_seen_at: string; revoked_at: string | null }
 export interface ConsentRecord { grant_id: string; user_id: string; device_id: string | null; source_host: string; conversation_ref: string | null; scope: string; created_at: string; updated_at: string; revoked_at: string | null }
+export type CaptureStatus = "off" | "active" | "paused" | "ended";
+export type PresenceStatus = "foreground" | "background" | "closed";
+export interface ConversationBindingRecord { binding_id: string; owner_user_id: string; source_host: string; conversation_ref: string; session_id: string; capture_status: CaptureStatus; presence_status: PresenceStatus; created_at: string; updated_at: string; last_seen_at: string }
 
 const hash = (value: string): string => createHash("sha256").update(value).digest("hex");
 const secret = (prefix: string): string => `${prefix}_${randomBytes(32).toString("base64url")}`;
@@ -61,7 +64,7 @@ export class IdentityService {
     const row = this.store.db.prepare("SELECT device_id,user_id FROM devices WHERE token_hash=? AND revoked_at IS NULL").get(hash(token)) as { device_id: string; user_id: string } | undefined;
     if (!row) return null;
     this.store.db.prepare("UPDATE devices SET last_seen_at=? WHERE device_id=?").run(new Date().toISOString(), row.device_id);
-    return { subject: `device:${row.device_id}`, userId: row.user_id, deviceId: row.device_id, scopes: new Set(["capture:write"]), authType: "device" };
+    return { subject: `device:${row.device_id}`, userId: row.user_id, deviceId: row.device_id, scopes: new Set(["capture:write", "knowledge:read"]), authType: "device" };
   }
 
   grantConsent(userId: string, input: { sourceHost: string; scope: string; deviceId?: string; conversationRef?: string }): ConsentRecord {
@@ -100,6 +103,48 @@ export class IdentityService {
       .run(at, at, input.userId, input.deviceId, input.sourceHost, input.conversationRef);
     if (result.changes) this.audit(input.userId, "consent.revoked_by_device", input.deviceId, { source_host: input.sourceHost, conversation_ref: input.conversationRef });
     return Number(result.changes);
+  }
+
+  getConversationBinding(userId: string, sourceHost: string, conversationRef: string): ConversationBindingRecord | null {
+    return (this.store.db.prepare(`SELECT * FROM conversation_bindings
+      WHERE owner_user_id=? AND source_host=? AND conversation_ref=?`).get(userId, sourceHost.trim(), conversationRef.trim()) as ConversationBindingRecord | undefined) ?? null;
+  }
+
+  createConversationBinding(userId: string, input: { sourceHost: string; conversationRef: string; sessionId: string }): ConversationBindingRecord {
+    const sourceHost = input.sourceHost.trim(); const conversationRef = input.conversationRef.trim();
+    if (!sourceHost || !conversationRef) throw new Error("source host and conversation ref are required");
+    if (this.store.sessionOwner(input.sessionId) !== userId) throw new Error("session not found");
+    const existing = this.getConversationBinding(userId, sourceHost, conversationRef);
+    if (existing) return existing;
+    const at = new Date().toISOString();
+    const binding: ConversationBindingRecord = {
+      binding_id: `binding_${randomUUID()}`, owner_user_id: userId, source_host: sourceHost,
+      conversation_ref: conversationRef, session_id: input.sessionId, capture_status: "active",
+      presence_status: "foreground", created_at: at, updated_at: at, last_seen_at: at,
+    };
+    this.store.db.prepare("INSERT INTO conversation_bindings VALUES(?,?,?,?,?,?,?,?,?,?)")
+      .run(binding.binding_id, binding.owner_user_id, binding.source_host, binding.conversation_ref, binding.session_id, binding.capture_status, binding.presence_status, binding.created_at, binding.updated_at, binding.last_seen_at);
+    this.audit(userId, "conversation_binding.created", binding.binding_id, { source_host: sourceHost, conversation_ref: conversationRef, session_id: input.sessionId });
+    return binding;
+  }
+
+  changeConversationCaptureStatus(userId: string, sourceHost: string, conversationRef: string, status: CaptureStatus): ConversationBindingRecord {
+    if (!(status === "off" || status === "active" || status === "paused" || status === "ended")) throw new Error("invalid capture status");
+    const at = new Date().toISOString();
+    const result = this.store.db.prepare(`UPDATE conversation_bindings SET capture_status=?,updated_at=?,last_seen_at=?
+      WHERE owner_user_id=? AND source_host=? AND conversation_ref=?`).run(status, at, at, userId, sourceHost.trim(), conversationRef.trim());
+    if (result.changes !== 1) throw new Error("conversation binding not found");
+    const binding = this.getConversationBinding(userId, sourceHost, conversationRef)!;
+    this.audit(userId, "conversation_binding.status", binding.binding_id, { capture_status: status });
+    return binding;
+  }
+
+  updateConversationPresence(userId: string, sourceHost: string, conversationRef: string, status: PresenceStatus): ConversationBindingRecord | null {
+    if (!(status === "foreground" || status === "background" || status === "closed")) throw new Error("invalid presence status");
+    const at = new Date().toISOString();
+    this.store.db.prepare(`UPDATE conversation_bindings SET presence_status=?,last_seen_at=?,updated_at=?
+      WHERE owner_user_id=? AND source_host=? AND conversation_ref=?`).run(status, at, at, userId, sourceHost.trim(), conversationRef.trim());
+    return this.getConversationBinding(userId, sourceHost, conversationRef);
   }
 
   issueWakeToken(userId: string, input: { deviceId: string; sessionId?: string; sourceHost: string; ttlSeconds?: number }): { wake_token: string; deep_link: string; expires_at: string } {
