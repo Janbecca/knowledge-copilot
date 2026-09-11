@@ -12,6 +12,33 @@ M1 provides a single-instance Beta deployment. The application listens on plain 
 
 Do not put API keys or long-lived credentials in `compose.yaml` or Git. Inject them with the deployment platform's secret manager.
 
+Public multi-user capture must enable OIDC and use a public SPA/native client with Authorization Code + PKCE. The API validates access tokens as a resource server; it does not store user passwords or mint login sessions. Configure:
+
+```text
+KNOWLEDGE_COPILOT_AUTH_MODE=oidc
+KNOWLEDGE_COPILOT_OIDC_ISSUER=https://<tenant>/
+KNOWLEDGE_COPILOT_OIDC_AUDIENCE=https://knowledge-copilot.xyz
+KNOWLEDGE_COPILOT_OIDC_CLIENT_ID=<public-spa-client-id>
+KNOWLEDGE_COPILOT_OIDC_DESKTOP_CLIENT_ID=<native-desktop-client-id>
+# Optional when discovery does not expose the expected endpoint:
+KNOWLEDGE_COPILOT_OIDC_JWKS_URL=https://<tenant>/.well-known/jwks.json
+KNOWLEDGE_COPILOT_DESKTOP_INSTALLER_URL=https://knowledge-copilot.xyz/downloads/Knowledge-Copilot-setup.exe
+```
+
+Register the exact panel redirect URI and logout URI with the identity provider. Keep capture disabled for public users until these values are live and a two-account ownership-isolation test has passed. `AUTH_MODE=disabled` is only the single-user migration/local-development posture.
+
+The protected-resource metadata advertises `KNOWLEDGE_COPILOT_OIDC_AUDIENCE` as its canonical `resource`. Keep that value identical to the Auth0 API Identifier; ChatGPT sends it as the OAuth `resource` parameter and the API verifies the same value in the access-token `aud` claim. The transport endpoint remains `/mcp` and does not need to be the resource identifier.
+
+For Auth0, create a custom API whose Identifier is exactly `https://knowledge-copilot.xyz` and define `knowledge:read`, `knowledge:write`, `device:manage`, and `capture:write` permissions. Create a Single Page Application with exact values: callback/logout `https://knowledge-copilot.xyz/app/`, web origin and CORS origin `https://knowledge-copilot.xyz`. The panel sends the API Identifier as the OAuth `audience`; omitting it produces a token intended for Auth0 `/userinfo`, which the knowledge API must reject.
+
+Paired desktop device tokens are server-defined credentials, not Auth0 access tokens. They receive only `capture:write` and `knowledge:read`: the extension can submit explicitly consented turns and the native desktop cockpit can read sessions owned by the paired user, but neither can edit knowledge, manage devices, or read another user's session.
+
+Create a separate Auth0 **Native Application** for the Windows companion. Add the exact callback `knowledge-copilot://auth/callback`, enable Authorization Code with PKCE, authorize the same custom API scopes, and set its client ID as `KNOWLEDGE_COPILOT_OIDC_DESKTOP_CLIENT_ID`. The desktop app exchanges the code locally, uses the short-lived access token once to create a scoped device credential, stores only that device credential in Windows Credential Manager, and never puts it in the deep link.
+
+Defining API permissions does not by itself authorize the SPA. In the custom API's **Application Access** tab, grant the `Knowledge Copilot Panel` application **User-Delegated Access** to all four scopes. Do not grant Client Access/M2M permissions. Without this client grant, Auth0 redirects back with `invalid_request` and reports that the client is not authorized to access the resource server.
+
+For ChatGPT/Codex MCP OAuth, enable Auth0's **Resource Parameter Compatibility Profile** and **Include Issuer in Authorization Responses** tenant settings. Auth0's current CIMD importer ignores ChatGPT's plural `token_endpoint_auth_methods_supported` field and maps the legacy preference to `private_key_jwt`, which Auth0 documents as Enterprise-only; do not create that imported client on a non-Enterprise plan. The current custom-MCP creation UI discovers authentication from the protected-resource and authorization-server metadata during tool scanning and does not expose predefined OAuth client fields. Treat Dynamic Client Registration as a fallback only: Auth0's open DCR endpoint permits unauthenticated client registration and strict third-party clients require explicit API grants and domain-level login connections. If DCR is used for a controlled initial registration, configure only user-delegated permissions, never client/M2M access, and disable DCR immediately afterward. Keep the Auth0 issuer's canonical trailing slash in token validation; the runtime normalizes the configured issuer accordingly.
+
 To enable the per-session `server_llm` option, inject these server-only variables before starting Compose:
 
 ```text
@@ -38,6 +65,8 @@ Verify:
 Invoke-RestMethod https://knowledge.example.com/health
 Invoke-RestMethod https://knowledge.example.com/ready
 Invoke-WebRequest https://knowledge.example.com/.well-known/openai-apps-challenge
+Invoke-RestMethod https://knowledge.example.com/.well-known/oauth-protected-resource
+Invoke-RestMethod https://knowledge.example.com/api/auth/config
 ```
 
 The MCP endpoint is `https://<domain>/mcp`; the standalone panel is `/app/`. Caddy limits request bodies to 1 MB and applies a 30-second upstream response-header timeout. The application independently validates its request limit, request timeout, exact CORS allowlist, and fixed-window rate limit.

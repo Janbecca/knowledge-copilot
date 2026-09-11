@@ -26,18 +26,24 @@ export class KnowledgeStore {
   }
   close(): void { this.db.close(); }
   isReady(): boolean { return (this.db.prepare("SELECT 1 AS ready").get() as { ready: number } | undefined)?.ready === 1; }
-  createSession(session: Session): Session {
-    this.db.prepare(`INSERT INTO sessions(session_id,title,status,capture_scope,created_at,updated_at,last_captured_turn,source_host,extraction_mode)
-      VALUES(?,?,?,?,?,?,?,?,?)`).run(session.session_id, session.title, session.status, JSON.stringify(session.capture_scope), session.created_at, session.updated_at, session.last_captured_turn, session.source_host, session.extraction_mode);
+  createSession(session: Session, ownerUserId: string | null = null): Session {
+    this.db.prepare(`INSERT INTO sessions(session_id,title,status,capture_scope,created_at,updated_at,last_captured_turn,source_host,extraction_mode,owner_user_id)
+      VALUES(?,?,?,?,?,?,?,?,?,?)`).run(session.session_id, session.title, session.status, JSON.stringify(session.capture_scope), session.created_at, session.updated_at, session.last_captured_turn, session.source_host, session.extraction_mode, ownerUserId);
     return session;
   }
   getSession(id: string): Session | null {
     const r = this.db.prepare("SELECT * FROM sessions WHERE session_id=?").get(id) as Record<string, unknown> | undefined;
-    return r ? { ...r, capture_scope: JSON.parse(String(r.capture_scope)) } as Session : null;
+    return r ? this.mapSession(r) : null;
   }
-  findActiveSessionBySourceHost(sourceHost: string): Session | null {
-    const r = this.db.prepare("SELECT * FROM sessions WHERE source_host=? AND status!='ended' ORDER BY updated_at DESC LIMIT 1").get(sourceHost) as Record<string, unknown> | undefined;
-    return r ? { ...r, capture_scope: JSON.parse(String(r.capture_scope)) } as Session : null;
+  findActiveSessionBySourceHost(sourceHost: string, ownerUserId: string | null = null): Session | null {
+    const r = ownerUserId === null
+      ? this.db.prepare("SELECT * FROM sessions WHERE source_host=? AND owner_user_id IS NULL AND status!='ended' ORDER BY updated_at DESC LIMIT 1").get(sourceHost) as Record<string, unknown> | undefined
+      : this.db.prepare("SELECT * FROM sessions WHERE source_host=? AND owner_user_id=? AND status!='ended' ORDER BY updated_at DESC LIMIT 1").get(sourceHost, ownerUserId) as Record<string, unknown> | undefined;
+    return r ? this.mapSession(r) : null;
+  }
+  sessionOwner(sessionId: string): string | null | undefined {
+    const row = this.db.prepare("SELECT owner_user_id FROM sessions WHERE session_id=?").get(sessionId) as { owner_user_id: string | null } | undefined;
+    return row?.owner_user_id;
   }
   updateSession(session: Session): void {
     this.db.prepare("UPDATE sessions SET title=?,status=?,capture_scope=?,updated_at=?,last_captured_turn=?,source_host=?,extraction_mode=? WHERE session_id=?")
@@ -54,6 +60,10 @@ export class KnowledgeStore {
     return (this.db.prepare("SELECT * FROM turns WHERE session_id=? ORDER BY cursor").all(sessionId) as Record<string, unknown>[]).map(r => this.mapTurn(r));
   }
   private mapTurn(r: Record<string, unknown>): Turn { return { ...r, tool_observations: JSON.parse(String(r.tool_observations)) } as Turn; }
+  private mapSession(r: Record<string, unknown>): Session {
+    const { owner_user_id: _owner, ...session } = r;
+    return { ...session, capture_scope: JSON.parse(String(r.capture_scope)) } as Session;
+  }
   getCard(cardId: string): KnowledgeCard | null {
     const r = this.db.prepare("SELECT payload FROM cards WHERE card_id=?").get(cardId) as {payload:string}|undefined;
     return r ? JSON.parse(r.payload) : null;

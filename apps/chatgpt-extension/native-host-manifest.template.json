@@ -1,0 +1,7 @@
+{
+  "name": "xyz.knowledge_copilot.desktop",
+  "description": "Narrow native bridge between ChatGPT Capture and Knowledge Copilot Desktop",
+  "path": "__APP_PATH__",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://__EXTENSION_ID__/"]
+}

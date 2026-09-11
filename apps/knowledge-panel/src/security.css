@@ -1,0 +1,50 @@
+.security-card {
+  margin-top: 20px;
+  border: 1px solid #d9e4dc;
+  border-radius: 16px;
+  padding: 16px;
+  background: #f8fbf9;
+}
+
+.device-form {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.device-form input {
+  min-width: 0;
+  flex: 1;
+}
+
+.device-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid #e2eae4;
+}
+
+.device-list span,
+.device-list small,
+.one-time-token code {
+  display: block;
+}
+
+.device-list small { color: #718078; }
+
+.one-time-token {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #e3b957;
+  border-radius: 12px;
+  background: #fff9e9;
+}
+
+.one-time-token code {
+  overflow-wrap: anywhere;
+  user-select: all;
+}

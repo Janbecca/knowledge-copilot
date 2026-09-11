@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"ABSOLUTE_PATH/knowledge-copilot/adapters/claude/hook.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"ABSOLUTE_PATH/knowledge-copilot/adapters/claude/hook.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"ABSOLUTE_PATH/knowledge-copilot/adapters/claude/hook.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "KNOWLEDGE_COPILOT_DESKTOP_EXE": "C:\\Program Files\\Knowledge Copilot\\knowledge-copilot-companion.exe"
+  }
+}

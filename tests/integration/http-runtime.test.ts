@@ -12,7 +12,7 @@ async function runtime(overrides: Partial<RuntimeConfig> = {}) {
   const config: RuntimeConfig = {
     environment: "test", host: "127.0.0.1", port: 0, database: ":memory:", logLevel: "error",
     bodyLimitBytes: 1024, requestTimeoutMs: 5_000, rateLimitMax: 20, rateLimitWindowMs: 60_000,
-    corsOrigins: ["https://allowed.test"], appsChallenge: "challenge-value", ...overrides,
+    corsOrigins: ["https://allowed.test"], appsChallenge: "challenge-value", authMode: "disabled", ...overrides,
   };
   const server = await startHttp(fixture.service, config);
   const address = server.address() as AddressInfo;
@@ -27,6 +27,7 @@ describe("deployable HTTP runtime", () => {
     expect(await (await fetch(`${base}/health`)).json()).toEqual({ ok: true });
     expect(await (await fetch(`${base}/ready`)).json()).toMatchObject({ ok: true, extractor: "mock" });
     expect((await fetch(`${base}/`, { redirect: "manual" })).headers.get("location")).toBe("/app/");
+    expect(await (await fetch(`${base}/install/`)).text()).toContain("knowledge-copilot://open");
     expect(await (await fetch(`${base}/.well-known/openai-apps-challenge`)).text()).toBe("challenge-value");
   });
   it("enforces exact CORS, request size, and rate limits", async () => {

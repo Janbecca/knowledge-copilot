@@ -1,8 +1,45 @@
 # Development status
 
-Last updated: 2026-08-29
+Last updated: 2026-08-31
 
 ## Current objective
+
+The ChatGPT Web first delivery plan is now tracked in `docs/chatgpt-web-first-plan.md`. The desktop frontend includes the first-use guide, system-browser PKCE with automatic device pairing, build-time fixed-extension-ID injection, first-launch Native Messaging registration, and a versioned Chrome-extension heartbeat. Auth0 Native Application configuration, the actual Web Store ID, live ChatGPT acceptance, and production capture/window hardening remain in the P0 release sequence.
+
+P0.2 conversation routing is now implemented in code: migration 5 adds owner-scoped `conversation_bindings`; device APIs resolve, restore, update presence/status, and capture through the binding's session. The Chrome adapter now renders a collapsed floating “知” launcher, establishes an explicit “from now” boundary, restores historical bindings, and requests desktop switch/collapse on page presence changes. Production acceptance on live ChatGPT remains pending.
+
+Build the secure cross-host desktop workflow agreed on 2026-08-29:
+
+- invoking Knowledge Copilot wakes the draggable desktop cockpit or shows an installation guide;
+- the user chooses `host_structured` or `server_llm` in the shared cockpit;
+- only explicitly authorized conversation content is captured;
+- owned sessions and learned knowledge remain available across ChatGPT, Claude Code, Codex, WorkBuddy, web, and desktop;
+- account, device, consent, pause/stop, and revocation controls precede automatic host capture.
+
+The approved security and consent contract is in `docs/security-and-consent.md`. Production identity will use a standards-based external OAuth/OIDC provider (Auth0 is the first deployment target), while the service implements resource-server validation and ownership enforcement.
+
+### Secure desktop delivery progress
+
+- [x] Product trust boundaries, adapter priority, consent defaults, ownership rules, and wake-token design documented.
+- [x] OIDC resource-server verification and protected-resource metadata.
+- [x] User/session ownership, paired device, consent grant, and audit persistence.
+- [x] Short-lived single-use wake-token API.
+- [x] Tauri custom protocol, secure device storage, capture indicator, and install fallback.
+- [ ] ChatGPT per-conversation browser extension and native messaging. Code, narrow permissions, native bridge, backend consent enforcement, and development registration script are complete; real Chrome UI acceptance and a fixed store extension ID remain.
+- [x] Official-interface-first Claude Code hook bridge and Codex MCP/skill contract.
+- [ ] WorkBuddy continuous lifecycle adapter (blocked on verification of an official host API; MCP tool flow remains available).
+- [x] Account/device/consent UI and signed-auth integration coverage.
+- [ ] Production OIDC configuration, deployment, and real-host acceptance.
+
+### Security constraints
+
+- Capture is off by default and never expands across hosts or conversations silently.
+- No global screen, keyboard, clipboard, password-field, or unrelated-window monitoring.
+- Windows UI Automation remains a separately reviewed optional fallback, not an initial capture mechanism.
+- Deep links carry only short-lived one-time wake tokens, never conversation text or durable credentials.
+- Production multi-user capture stays disabled until OIDC and ownership enforcement are deployed.
+
+## Existing extraction objective
 
 Ship two extraction paths that coexist in every panel and can be switched per learning session:
 
@@ -41,11 +78,34 @@ The selected mode is persisted on the session, so ChatGPT MCP Apps, the standalo
 ## Verification record
 
 - `npm run typecheck`: passed on 2026-08-29.
-- `npm test`: 10 test files, 29/29 tests passed on 2026-08-29.
+- `npm test`: 13 test files, 36/36 tests passed on 2026-08-29.
 - `npm run build`: panel, desktop UI, and TypeScript production build passed; final panel output 282.21 kB (69.22 kB gzip).
 - Real Playwright browser flow: created a `server_llm` session, switched it to `host_structured`, submitted a structured knowledge item, and observed cursor `0 -> 1` plus a rendered card.
 - `npm run verify:plugin`: passed for final and Beta standalone package copies.
 - `npm run test:mcp`: passed with 15 tools, declared contracts, cursor 1, and an operation card.
+- Secure identity verification on 2026-08-29: 13 test files and 36/36 tests passed, including signed RS256 JWT/JWKS validation, 401/403 handling, cross-owner 404 isolation, device pairing/revocation, consent revocation, one-time wake consumption, and replay rejection.
+- Desktop wake verification on 2026-08-29: TypeScript typecheck passed; Vite desktop UI build passed; native `cargo check` passed with Tauri deep-link + single-instance, Windows credential manager, and HTTPS wake consumption.
+- Desktop installer on 2026-08-29: unsigned NSIS package rebuilt successfully with the native host and Claude hook bridge at `apps/desktop-companion/src-tauri/target/release/bundle/nsis/Knowledge Copilot_0.1.0_x64-setup.exe` (2,870,741 bytes). Code signing and automatic Native Messaging manifest registration remain release work.
+- ChatGPT adapter on 2026-08-29: Manifest V3 scripts pass JavaScript syntax validation; permissions are limited to `storage`, `nativeMessaging`, and `https://chatgpt.com/*`; device capture without matching per-conversation consent returns 403 in the signed OIDC HTTP integration test.
+- Claude Code adapter on 2026-08-29: official `UserPromptSubmit`, `Stop`, and `SessionEnd` command-hook bridge implemented; JavaScript syntax and native Rust bridge compilation passed. `server_llm` forwards completed turns, while `host_structured` feeds a scoped instruction back to Claude to call the MCP structured-capture tool.
+- Final repository verification on 2026-08-29: repository policy, TypeScript typecheck, 13 test files/36 tests, panel + desktop UI + server build, standalone plugin packaging, and the 16-tool MCP smoke contract all passed in one `npm run verify` run.
+- Local Windows acceptance on 2026-08-29: the rebuilt NSIS package installed successfully to `D:\Knowledge Copilot` and launched the `Knowledge Copilot` desktop window. Chrome's protected `chrome://extensions` surface cannot be automated by the browser-control policy, so unpacked-extension loading and collection of the generated extension ID require a one-time user handoff before the Native Messaging registry entry can be installed.
+- Local Chrome bridge acceptance on 2026-08-30: unpacked extension ID `mogdmefadbebcnmnkgdmikfpkbjmafci` was bound to the installed desktop executable through the current-user Native Messaging registry; the generated manifest restricts `allowed_origins` to that exact extension. Auth0 SPA review confirmed the panel already sends the custom API Identifier through the OAuth `audience` authorization parameter.
+- Auth0 compatibility verification on 2026-08-30: the runtime now normalizes the configured issuer to Auth0's canonical trailing-slash form and resolves the default JWKS endpoint without a double slash. Typecheck, 14 test files/38 tests, panel build, desktop UI build, and the production TypeScript build all passed.
+- Auth0 tenant setup on 2026-08-30: the `Knowledge Copilot API` custom API was created with Identifier `https://knowledge-copilot.xyz` and RS256 signing. Its `knowledge:read`, `knowledge:write`, `device:manage`, and `capture:write` permissions are configured. The `Knowledge Copilot Panel` SPA is registered under issuer `https://dev-7wysgw1kgyi82w1r.us.auth0.com/` with public client ID `MKMOpGxITUDF6rFqK8TnTbwi2ZVjZu9C`. Resource Parameter Compatibility, authorization-response issuer identification, and manual CIMD registration are enabled; importing and authorizing the ChatGPT/Codex MCP client remains before production OIDC is enabled.
+- Auth0 MCP client decision on 2026-08-30: previewing `https://chatgpt.com/oauth/client.json` succeeded but Auth0 ignored ChatGPT's plural authentication-method field and mapped the legacy preference to `private_key_jwt`, an Auth0 Enterprise-only feature. To avoid a post-trial dependency, do not create that CIMD client. The current ChatGPT custom-MCP UI has no predefined-client authentication fields; it discovers OAuth while scanning the protected server. Deploy OIDC metadata first, then validate the resulting linking path before considering temporary DCR, which exposes an unauthenticated registration endpoint and requires extra strict-third-party grants and connection configuration.
+- Production OIDC rollout on 2026-08-30: code `11ed65c` deployed with Auth0 issuer, API audience, public SPA client ID, and JWKS configuration after backing up the prior environment. Pre-link verification found and fixed a protected-resource mismatch so the advertised OAuth `resource`, Auth0 API Identifier, and verified token audience are all exactly `https://knowledge-copilot.xyz`, while the MCP transport remains `/mcp`.
+- Production OIDC acceptance on 2026-08-30: code `218402a` is live; `/health` and `/ready` pass with extractor `llm`, `/api/auth/config` reports the expected issuer/audience/public SPA client, and protected-resource metadata advertises the exact audience plus canonical issuer. Auth0 discovery confirms issuer-response identification and PKCE `S256`. Panel login remains the next user acceptance step; ChatGPT client registration remains intentionally unresolved rather than depending on trial-only `private_key_jwt`.
+- Panel login diagnosis on 2026-08-30: Auth0 accepted the public client and exact callback but returned `invalid_request` because `Knowledge Copilot Panel` had no client grant for the custom API. The frontend now surfaces OAuth callback errors and reports an uninitialized login manager instead of silently rendering the same login screen. Auth0 still needs a user-delegated four-scope grant for the SPA; no Client Access/M2M grant is required.
+- Authenticated panel acceptance on 2026-08-31: the production Auth0 signup/login flow completed successfully after the SPA received its user-delegated API grant. A follow-up Chrome adapter defect was found where a historical invocation phrase triggered `wake` during page scanning and any unavailable Native Messaging host opened the installer automatically. The extension now requires the explicit per-conversation grant action before wake and never opens the installer merely because native messaging failed.
+- ChatGPT Web P0.1-P0.3 implementation on 2026-09-01: desktop Authorization Code + PKCE and first-launch Native Messaging registration, server-owned per-conversation bindings, the collapsed ChatGPT “知” entry, explicit from-now consent, durable retry queue, foreground/background routing, and local native desktop cockpit rendering are implemented. The desktop CSP now forbids frames; its native command uses the paired device credential for owner-scoped read-only session access without exposing the token to WebView JavaScript. A follow-up acceptance pass added a serialized queue lock so concurrent offline tabs cannot overwrite one another, plus 30-turn/three-conversation routing, retry and deduplication coverage. TypeScript typecheck, 15 test files/46 tests, native `cargo check --locked --offline`, alternate-directory panel/desktop/server builds, plugin validation and the 16-tool MCP smoke pass. Auth0 Native Application/Web Store production setup and real ChatGPT/Chrome acceptance remain external release gates.
+
+## Live DeepSeek follow-up
+
+- Production credentials and `deepseek-v4-flash` were accepted by `GET /models`; the key was injected only through hidden SSH input.
+- The first live capture returned 504 because the old extractor asked for a full card-event schema without actually including that schema. DeepSeek returned a valid JSON object with the wrong event shape, triggering repair attempts behind Caddy's 30-second header timeout.
+- Fix in progress on `fix/deepseek-structured-output`: ask the model for the same compact, validated `knowledge_items` contract used by host mode, then let the trusted server map items to canonical IDs, provenance, add/revise events, and cards. Output is capped at 1600 tokens and active-card context is minimized.
+- Fix verification: typecheck passed; 11 test files and 32/32 tests passed; production build and 15-tool MCP smoke passed.
 - Added dedicated coverage for routing, no-extra-call host mode, server-mode precedence, retry atomicity, persisted mode switching, HTTP switching, and panel controls.
 
 ## Deployment target
